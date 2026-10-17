@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   BadgeDollarSign,
   Banknote,
@@ -6,11 +6,14 @@ import {
   Coins,
   FolderClock,
   Globe,
+  HandCoins,
   Plus,
+  Receipt,
   Repeat,
+  RotateCcw,
   ShieldAlert,
   Sparkles,
-  TrendingUp,
+  Tag,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
@@ -30,6 +33,7 @@ import {
   StatusMixChart,
 } from "@/features/dashboard/PortfolioCharts";
 import { useActivityQuery, useDomainsQuery, useLoadDemoData } from "@/features/domains/queries";
+import { DomainFormDialog } from "@/features/domains/components/DomainFormDialog";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { deriveDomains, summarizePortfolio } from "@/lib/domain-rules";
@@ -43,6 +47,7 @@ export function DashboardPage() {
   const navigate = useNavigate();
   const { profile, user } = useAuth();
   const workspace = useWorkspace().current;
+  const [createOpen, setCreateOpen] = useState(false);
 
   const { data: rows, isLoading, isError, refetch, isFetching } = useDomainsQuery();
   const { data: activity, isLoading: activityLoading } = useActivityQuery(8);
@@ -113,18 +118,29 @@ export function DashboardPage() {
               <Repeat />
               {t("dashboard.reviewRenewals")}
             </Button>
-            <Button variant="primary" onClick={() => navigate("/domains")}>
+            <Button variant="primary" onClick={() => setCreateOpen(true)}>
               <Plus />
-              {t("dashboard.addDomain")}
+              {t("domains.addDomain")}
             </Button>
           </>
         }
       />
 
       {isLoading ? (
-        <KpiSkeleton count={8} />
+        <KpiSkeleton count={10} />
       ) : (
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <KpiCard
+            label={t("dashboard.kpi.totalDomains")}
+            value={summary.totalDomains}
+            icon={Globe}
+            footer={
+              <p className="text-2xs text-muted-foreground">
+                {t("dashboard.kpi.activeDomains")}: {summary.activeDomains} · {t("dashboard.kpi.listedDomains")}:{" "}
+                {summary.listedDomains}
+              </p>
+            }
+          />
           <KpiCard
             label={t("dashboard.kpi.portfolioValue")}
             value={summary.estimatedPortfolioValue}
@@ -138,14 +154,19 @@ export function DashboardPage() {
             }
           />
           <KpiCard
-            label={t("dashboard.kpi.totalDomains")}
-            value={summary.totalDomains}
-            icon={Globe}
-            footer={
-              <p className="text-2xs text-muted-foreground">
-                {t("dashboard.kpi.purchaseCost")}: {money(summary.totalPurchaseCost, { currency, compact: true })}
-              </p>
-            }
+            label={t("dashboard.kpi.purchaseCost")}
+            value={summary.totalPurchaseCost}
+            format="money"
+            currency={currency}
+            icon={Banknote}
+          />
+          <KpiCard
+            label={t("dashboard.kpi.totalSales")}
+            value={summary.totalSales}
+            format="money"
+            currency={currency}
+            icon={HandCoins}
+            tone={summary.totalSales > 0 ? "positive" : "neutral"}
           />
           <KpiCard
             label={t("dashboard.kpi.netProfit")}
@@ -157,12 +178,14 @@ export function DashboardPage() {
             hint={t("dashboard.kpiHint.netProfit")}
           />
           <KpiCard
-            label={t("dashboard.kpi.roi")}
-            value={summary.roi}
-            format="percent"
-            tone={(summary.roi ?? 0) >= 0 ? "positive" : "negative"}
-            icon={TrendingUp}
-            hint={t("dashboard.kpiHint.roi")}
+            label={t("dashboard.kpi.soldDomains")}
+            value={summary.soldDomains}
+            icon={Tag}
+            footer={
+              <p className="text-2xs text-muted-foreground">
+                {t("dashboard.kpi.sellRate")}: {percent(summary.sellRate)}
+              </p>
+            }
           />
           <KpiCard
             label={t("dashboard.kpi.expiringSoon")}
@@ -171,36 +194,28 @@ export function DashboardPage() {
             icon={CalendarClock}
             footer={
               <p className="text-2xs text-muted-foreground">
-                {t("dashboard.expiring.subtitle")} · {money(summary.totalRenewalCost, { currency, compact: true })}
+                {t("dashboard.expiring.subtitle")}
               </p>
             }
           />
           <KpiCard
-            label={t("dashboard.kpi.purchaseCost")}
-            value={summary.totalPurchaseCost}
+            label={t("dashboard.kpi.expiredDomains")}
+            value={summary.expiredDomains}
+            tone={summary.expiredDomains > 0 ? "negative" : "neutral"}
+            icon={ShieldAlert}
+          />
+          <KpiCard
+            label={t("dashboard.kpi.renewedDomains")}
+            value={summary.renewedDomains}
+            icon={RotateCcw}
+          />
+          <KpiCard
+            label={t("dashboard.kpi.documentedRenewalCost")}
+            value={summary.totalRenewalCost}
             format="money"
             currency={currency}
-            icon={Banknote}
-          />
-          <KpiCard
-            label={t("dashboard.kpi.requiringAction")}
-            value={summary.requiringAction}
-            tone={summary.requiringAction > 0 ? "warning" : "neutral"}
-            icon={ShieldAlert}
-            hint={t("dashboard.kpiHint.requiringAction")}
-          />
-          <KpiCard
-            label={t("dashboard.kpi.sellRate")}
-            value={summary.sellRate}
-            format="percent"
-            icon={FolderClock}
-            hint={t("dashboard.kpiHint.sellRate")}
-            footer={
-              <p className="text-2xs text-muted-foreground">
-                {t("dashboard.kpi.soldDomains")}: {summary.soldDomains} · {t("dashboard.kpi.totalSales")}:{" "}
-                {money(summary.totalSales, { currency, compact: true })}
-              </p>
-            }
+            icon={Receipt}
+            hint={t("dashboard.kpiHint.renewalCost")}
           />
         </div>
       )}
@@ -320,6 +335,15 @@ export function DashboardPage() {
         {t("dashboard.kpi.dataQuality")}: {summary.dataQualityIssues} · {t("dashboard.kpi.roi")}: {percent(summary.roi)} ·{" "}
         {signedMoney(summary.netProfit, currency)}
       </div>
+
+      <DomainFormDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onSaved={() => {
+          toast.success(t("dashboard.addedRedirect"));
+          navigate("/domains");
+        }}
+      />
     </div>
   );
 }

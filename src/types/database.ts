@@ -8,6 +8,9 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type DomainStatus = "active" | "listed" | "sold" | "expired";
+export type DomainSource = "manual" | "imported";
+/** Registrar/registry lifecycle state, stored because there is no live sync. */
+export type RegistryStatus = "active" | "grace" | "redemption" | "hold" | "expired";
 export type RenewalDecision = "auto_renew" | "renew" | "review" | "dont_renew" | "pending";
 export type SaleType = "buy_now" | "make_offer" | "request_price";
 export type PurchaseCurrency = "USD" | "EUR";
@@ -34,7 +37,9 @@ export type DomainRow = {
   user_id: string;
   domain: string;
   tld: string | null;
+  folder_id: string | null;
   purchase_date: string | null;
+  registered_date: string | null;
   expiry_date: string | null;
   purchase_price: number | null;
   purchase_currency: PurchaseCurrency;
@@ -44,6 +49,14 @@ export type DomainRow = {
   renewal_decision: RenewalDecision;
   listed_on: string[] | null;
   asking_price: number | null;
+  min_offer: number | null;
+  auto_renew: boolean;
+  privacy: boolean;
+  locked: boolean;
+  nameservers: string[];
+  url_forwarding: string | null;
+  source: DomainSource;
+  registry_status: RegistryStatus | null;
   sale_platform: string | null;
   sale_type: SaleType | null;
   sold_date: string | null;
@@ -57,6 +70,16 @@ export type DomainRow = {
   archived_at: string | null;
   archive_reason: string | null;
   last_renewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type FolderRow = {
+  id: string;
+  workspace_id: string;
+  name: string;
+  color: string;
+  sort_order: number;
   created_at: string;
   updated_at: string;
 };
@@ -175,7 +198,9 @@ export type Database = {
           workspace_id: string;
           user_id: string;
           domain: string;
+          folder_id?: string | null;
           purchase_date?: string | null;
+          registered_date?: string | null;
           expiry_date?: string | null;
           purchase_price?: number | null;
           purchase_currency?: PurchaseCurrency;
@@ -185,6 +210,14 @@ export type Database = {
           renewal_decision?: RenewalDecision;
           listed_on?: string[] | null;
           asking_price?: number | null;
+          min_offer?: number | null;
+          auto_renew?: boolean;
+          privacy?: boolean;
+          locked?: boolean;
+          nameservers?: string[];
+          url_forwarding?: string | null;
+          source?: DomainSource;
+          registry_status?: RegistryStatus | null;
           sale_platform?: string | null;
           sale_type?: SaleType | null;
           sold_date?: string | null;
@@ -202,6 +235,11 @@ export type Database = {
         Partial<
           Omit<DomainRow, "id" | "workspace_id" | "user_id" | "tld" | "created_at" | "updated_at">
         >
+      >;
+      folders: Table<
+        FolderRow,
+        { id?: string; workspace_id: string; name: string; color?: string; sort_order?: number },
+        { name?: string; color?: string; sort_order?: number; updated_at?: string }
       >;
       domain_activity: Table<
         DomainActivityRow,
@@ -305,3 +343,5 @@ export type Database = {
 
 export type DomainInsert = Database["public"]["Tables"]["domains"]["Insert"];
 export type DomainUpdate = Database["public"]["Tables"]["domains"]["Update"];
+export type FolderInsert = Database["public"]["Tables"]["folders"]["Insert"];
+export type FolderUpdate = Database["public"]["Tables"]["folders"]["Update"];

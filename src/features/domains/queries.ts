@@ -6,17 +6,23 @@ import {
   archiveDomain,
   archiveDomains,
   createDomain,
+  createDomainsBulk,
+  createFolder,
+  deleteDomain,
+  deleteFolder,
   fetchActivity,
   fetchDomain,
   fetchDomainActivity,
   fetchDomains,
+  fetchFolders,
   loadDemoData,
   renewDomain,
   restoreDomain,
   restoreDomains,
   updateDomain,
+  updateFolder,
 } from "./api";
-import type { DomainRow } from "@/types/database";
+import type { DomainRow, DomainUpdate } from "@/types/database";
 
 /* --------------------------------- queries -------------------------------- */
 
@@ -76,6 +82,21 @@ export function useCreateDomain() {
     mutationFn: (values: Record<string, unknown>) => {
       if (!workspaceId || !user) throw new Error("No workspace");
       return createDomain({ workspaceId, userId: user.id, values });
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/** Bulk create used by the import wizard. Invalidates the whole portfolio. */
+export function useBulkCreateDomains() {
+  const { user } = useAuth();
+  const workspaceId = useWorkspace().current?.id ?? null;
+  const invalidate = useInvalidatePortfolio();
+
+  return useMutation({
+    mutationFn: (rows: Record<string, unknown>[]) => {
+      if (!workspaceId || !user) throw new Error("No workspace");
+      return createDomainsBulk({ workspaceId, userId: user.id, rows });
     },
     onSuccess: invalidate,
   });
@@ -169,6 +190,105 @@ export function useLoadDemoData() {
     mutationFn: () => {
       if (!workspaceId) throw new Error("No workspace");
       return loadDemoData(workspaceId);
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/* --------------------------- folders (query + CRUD) ------------------------ */
+
+export function useFoldersQuery() {
+  const workspaceId = useWorkspace().current?.id ?? null;
+  return useQuery({
+    queryKey: queryKeys.folders(workspaceId ?? "none"),
+    queryFn: () => fetchFolders(workspaceId as string),
+    enabled: Boolean(workspaceId),
+  });
+}
+
+function useInvalidateFolders() {
+  const queryClient = useQueryClient();
+  return () => queryClient.invalidateQueries({ queryKey: ["folders"] });
+}
+
+export function useCreateFolder() {
+  const workspaceId = useWorkspace().current?.id ?? null;
+  const invalidate = useInvalidateFolders();
+  return useMutation({
+    mutationFn: (input: { name: string; color: string }) => {
+      if (!workspaceId) throw new Error("No workspace");
+      return createFolder({ workspaceId, ...input });
+    },
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateFolder() {
+  const invalidate = useInvalidateFolders();
+  return useMutation({
+    mutationFn: (input: { id: string; name?: string; color?: string; sort_order?: number }) => updateFolder(input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteFolder() {
+  const invalidate = useInvalidateFolders();
+  const invalidatePortfolio = useInvalidatePortfolio();
+  return useMutation({
+    mutationFn: (id: string) => deleteFolder(id),
+    onSuccess: async () => {
+      await invalidate();
+      await invalidatePortfolio();
+    },
+  });
+}
+
+/* ------------------------- inline single-field update ---------------------- */
+
+/**
+ * Optimistic update for a single stored field (the Auto/Privacy/Locked switches,
+ * folder assignment, URL forwarding). Rolls back if the server rejects it.
+ */
+export function useQuickUpdateDomain(includeArchived = false) {
+  const { user } = useAuth();
+  const workspaceId = useWorkspace().current?.id ?? null;
+  const queryClient = useQueryClient();
+  const invalidate = useInvalidatePortfolio();
+  const key = queryKeys.domains(workspaceId ?? "none", includeArchived ? "with-archived" : "active");
+
+  return useMutation({
+    mutationFn: (input: { previous: DomainRow; values: DomainUpdate }) => {
+      if (!workspaceId || !user) throw new Error("No workspace");
+      return updateDomain({ workspaceId, userId: user.id, previous: input.previous, values: input.values });
+    },
+    onMutate: async input => {
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<DomainRow[]>(key);
+      if (previous) {
+        queryClient.setQueryData<DomainRow[]>(
+          key,
+          previous.map(row => (row.id === input.previous.id ? { ...row, ...input.values } : row))
+        );
+      }
+      return { previous };
+    },
+    onError: (_error, _input, context) => {
+      if (context?.previous) queryClient.setQueryData(key, context.previous);
+    },
+    onSettled: invalidate,
+  });
+}
+
+/* ------------------------------- delete ----------------------------------- */
+
+export function useDeleteDomain() {
+  const { user } = useAuth();
+  const workspaceId = useWorkspace().current?.id ?? null;
+  const invalidate = useInvalidatePortfolio();
+  return useMutation({
+    mutationFn: (domain: DomainRow) => {
+      if (!workspaceId || !user) throw new Error("No workspace");
+      return deleteDomain({ workspaceId, userId: user.id, domain });
     },
     onSuccess: invalidate,
   });

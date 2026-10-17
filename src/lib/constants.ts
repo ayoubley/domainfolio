@@ -29,6 +29,22 @@ export const ACTIVITY_ACTIONS = [
 
 export const NICHES = ["Brandable", "Keyword", "Geo", "Exact Match", "Trend"] as const;
 
+/** Folder palette keys. The Tailwind classes for each live in `folderColorClass`. */
+export const FOLDER_COLORS = [
+  "slate",
+  "blue",
+  "violet",
+  "amber",
+  "red",
+  "emerald",
+  "rose",
+  "cyan",
+] as const;
+export const DEFAULT_FOLDER_COLOR = "slate";
+
+export const REGISTRY_STATUSES = ["active", "grace", "redemption", "hold", "expired"] as const;
+export const DOMAIN_SOURCES = ["manual", "imported"] as const;
+
 export const DEFAULT_STATUS: DomainStatus = "active";
 export const DEFAULT_RENEWAL_DECISION: RenewalDecision = "auto_renew";
 export const DEFAULT_CURRENCY = "USD";
@@ -49,3 +65,7 @@ export function assertNever(value: never): never {
 }
 
 export type { DomainActivityAction, DomainStatus, RenewalDecision, SaleType };
+
+export type FolderColor = (typeof FOLDER_COLORS)[number];
+export type RegistryStatus = (typeof REGISTRY_STATUSES)[number];
+export type DomainSource = (typeof DOMAIN_SOURCES)[number];

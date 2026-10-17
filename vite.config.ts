@@ -57,6 +57,9 @@ export default defineConfig({
           }
           if (id.includes("i18next")) return "i18n";
           if (id.includes("@tanstack")) return "tanstack";
+          // xlsx is only ever reached through a dynamic import (import/export),
+          // so it stays a separate, lazily-fetched chunk.
+          if (inPackage("xlsx")) return "xlsx";
           return "vendor";
         },
       },

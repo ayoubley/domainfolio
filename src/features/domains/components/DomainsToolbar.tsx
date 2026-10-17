@@ -1,4 +1,17 @@
-import { Check, Columns3, Download, LayoutGrid, List, Plus, SlidersHorizontal, X } from "lucide-react";
+import {
+  Building2,
+  Check,
+  ChevronDown,
+  Columns3,
+  Download,
+  FolderTree,
+  Globe,
+  LayoutGrid,
+  List,
+  Plus,
+  SlidersHorizontal,
+  X,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { SearchInput } from "@/components/shared/SearchInput";
@@ -19,13 +32,20 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Separator } from "@/components/ui/separator";
 import { DOMAIN_STATUSES, EXPIRY_RISK_BUCKETS, PURCHASE_CURRENCIES, RENEWAL_DECISIONS } from "@/lib/constants";
 import type { ExpiryRisk } from "@/lib/domain-rules";
-import type { DomainStatus, PurchaseCurrency, RenewalDecision } from "@/types/database";
+import type { DomainStatus, FolderRow, PurchaseCurrency, RenewalDecision } from "@/types/database";
 import { countActiveFilters, type DomainFilters, type ListedFilter } from "@/features/domains/filters";
+import { folderColorClass } from "@/features/domains/folder-colors";
 import { cn } from "@/lib/utils";
 
 export type DomainView = "table" | "cards";
 
-type Facets = { registrars: string[]; niches: string[]; tags: string[] };
+type Facets = {
+  registrars: string[];
+  tlds: string[];
+  folderIds: string[];
+  niches: string[];
+  tags: string[];
+};
 
 function toggle<T>(list: T[], value: T): T[] {
   return list.includes(value) ? list.filter(item => item !== value) : [...list, value];
@@ -71,6 +91,7 @@ export function DomainsToolbar({
   filters,
   onFiltersChange,
   facets,
+  folders,
   view,
   onViewChange,
   columns,
@@ -83,6 +104,7 @@ export function DomainsToolbar({
   filters: DomainFilters;
   onFiltersChange: (filters: DomainFilters) => void;
   facets: Facets;
+  folders: FolderRow[];
   view: DomainView;
   onViewChange: (view: DomainView) => void;
   columns: { id: string; label: string; hideable: boolean }[];
@@ -108,11 +130,109 @@ export function DomainsToolbar({
           />
         </div>
 
+        {/* Quick facet buttons: Registrar · TLD · Folder */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="md" className={cn(filters.registrar.length > 0 && "border-primary text-primary")}>
+              <Building2 />
+              <span className="hidden sm:inline">{t("domains.filters.registrar")}</span>
+              {filters.registrar.length > 0 ? (
+                <span className="tabular rounded-full bg-primary px-1.5 text-2xs font-medium text-primary-foreground">
+                  {filters.registrar.length}
+                </span>
+              ) : (
+                <ChevronDown className="size-3.5 opacity-60" />
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="max-h-72 w-56 overflow-y-auto">
+            {facets.registrars.length === 0 ? (
+              <DropdownMenuItem disabled>{t("domains.filters.noneAvailable")}</DropdownMenuItem>
+            ) : (
+              facets.registrars.map(registrar => (
+                <DropdownMenuCheckboxItem
+                  key={registrar}
+                  checked={filters.registrar.includes(registrar)}
+                  onCheckedChange={() => patch({ registrar: toggle(filters.registrar, registrar) })}
+                  onSelect={event => event.preventDefault()}
+                >
+                  {registrar}
+                </DropdownMenuCheckboxItem>
+              ))
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="md" className={cn(filters.tld.length > 0 && "border-primary text-primary")}>
+              <Globe />
+              <span className="hidden sm:inline">{t("domains.filters.tld")}</span>
+              {filters.tld.length > 0 ? (
+                <span className="tabular rounded-full bg-primary px-1.5 text-2xs font-medium text-primary-foreground">
+                  {filters.tld.length}
+                </span>
+              ) : (
+                <ChevronDown className="size-3.5 opacity-60" />
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="max-h-72 w-56 overflow-y-auto">
+            {facets.tlds.length === 0 ? (
+              <DropdownMenuItem disabled>{t("domains.filters.noneAvailable")}</DropdownMenuItem>
+            ) : (
+              facets.tlds.map(tld => (
+                <DropdownMenuCheckboxItem
+                  key={tld}
+                  checked={filters.tld.includes(tld)}
+                  onCheckedChange={() => patch({ tld: toggle(filters.tld, tld) })}
+                  onSelect={event => event.preventDefault()}
+                >
+                  .{tld}
+                </DropdownMenuCheckboxItem>
+              ))
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="md" className={cn(filters.folderId.length > 0 && "border-primary text-primary")}>
+              <FolderTree />
+              <span className="hidden sm:inline">{t("domains.filters.folder")}</span>
+              {filters.folderId.length > 0 ? (
+                <span className="tabular rounded-full bg-primary px-1.5 text-2xs font-medium text-primary-foreground">
+                  {filters.folderId.length}
+                </span>
+              ) : (
+                <ChevronDown className="size-3.5 opacity-60" />
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="max-h-72 w-56 overflow-y-auto">
+            {folders.length === 0 ? (
+              <DropdownMenuItem disabled>{t("domains.filters.noneAvailable")}</DropdownMenuItem>
+            ) : (
+              folders.map(folder => (
+                <DropdownMenuCheckboxItem
+                  key={folder.id}
+                  checked={filters.folderId.includes(folder.id)}
+                  onCheckedChange={() => patch({ folderId: toggle(filters.folderId, folder.id) })}
+                  onSelect={event => event.preventDefault()}
+                >
+                  <span className={cn("size-2 rounded-full", folderColorClass(folder.color).dot)} aria-hidden />
+                  {folder.name}
+                </DropdownMenuCheckboxItem>
+              ))
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" size="md">
               <SlidersHorizontal />
-              {t("common.filters")}
+              {t("domains.addFilter")}
               {activeCount > 0 ? (
                 <span className="tabular ms-0.5 rounded-full bg-primary px-1.5 text-2xs font-medium text-primary-foreground">
                   {activeCount}
@@ -369,6 +489,16 @@ export function DomainsToolbar({
               onRemove={() => patch({ registrar: toggle(filters.registrar, registrar) })}
             />
           ))}
+          {filters.tld.map(tld => (
+            <Chip key={tld} label={`.${tld}`} onRemove={() => patch({ tld: toggle(filters.tld, tld) })} />
+          ))}
+          {filters.folderId.map(folderId => (
+            <Chip
+              key={folderId}
+              label={folders.find(folder => folder.id === folderId)?.name ?? folderId}
+              onRemove={() => patch({ folderId: toggle(filters.folderId, folderId) })}
+            />
+          ))}
           {filters.tags.map(tag => (
             <Chip key={tag} label={tag} onRemove={() => patch({ tags: toggle(filters.tags, tag) })} />
           ))}
@@ -416,6 +546,8 @@ function resetFacets(): Partial<DomainFilters> {
     risk: [],
     decision: [],
     registrar: [],
+    tld: [],
+    folderId: [],
     niche: [],
     tags: [],
     currency: [],

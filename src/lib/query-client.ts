@@ -27,6 +27,7 @@ export const queryKeys = {
   workspaceMembers: (workspaceId: string) => ["workspaces", workspaceId, "members"] as const,
   domains: (workspaceId: string, scope: string) => ["domains", workspaceId, scope] as const,
   domain: (id: string) => ["domain", id] as const,
+  folders: (workspaceId: string) => ["folders", workspaceId] as const,
   activity: (workspaceId: string) => ["activity", workspaceId] as const,
   domainActivity: (domainId: string) => ["activity", "domain", domainId] as const,
   savedViews: (workspaceId: string) => ["saved-views", workspaceId] as const,

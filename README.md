@@ -23,11 +23,18 @@ the front end, Supabase (Postgres + Auth + RLS) on the back end.
 
 ## 3. Create the database schema
 
-In the Supabase dashboard open **SQL Editor** → **New query**, then run the two
+In the Supabase dashboard open **SQL Editor** → **New query**, then run the
 migrations **in order** (copy the whole file each time and click **Run**):
 
 1. `supabase/migrations/0001_init.sql` — tables, enums, indexes, triggers, constraints.
 2. `supabase/migrations/0002_policies.sql` — helper functions, Row Level Security policies and RPCs.
+3. `supabase/migrations/0003_domains_extend.sql` — folders table and the extra domain
+   columns the Domains table shows (`folder_id`, `registered_date`, `min_offer`,
+   `auto_renew`, `privacy`, `locked`, `nameservers`, `url_forwarding`, `source`,
+   `registry_status`), plus the updated demo seeder.
+
+> If you already ran `0001`/`0002`, you only need to run the migrations you
+> haven't yet. `0003` is additive and safe to run on an existing dataset.
 
 ## 4. Collect your keys
 
@@ -79,9 +86,11 @@ Other scripts:
 
 ## 7. Deploy to Vercel
 
-1. Push this repository to GitHub (the project lives in the `domainfolio/` folder).
+1. Push this repository to GitHub. The repository root **is** the app, so Vercel
+   needs no subdirectory.
 2. In Vercel → **Add New… → Project** → import the repository.
-3. Set **Root Directory** to `domainfolio`.
+3. Leave **Root Directory** at the repository root (the default). Do not point
+   it at a subfolder — there isn't one.
 4. Framework preset **Vite** (build `npm run build`, output `dist` — `vercel.json`
    already declares this).
 5. Under **Environment Variables**, add:

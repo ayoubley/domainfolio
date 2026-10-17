@@ -9,6 +9,8 @@ export type DomainFilters = {
   risk: ExpiryRisk[];
   decision: RenewalDecision[];
   registrar: string[];
+  tld: string[];
+  folderId: string[];
   niche: string[];
   tags: string[];
   currency: PurchaseCurrency[];
@@ -24,6 +26,8 @@ export const EMPTY_FILTERS: DomainFilters = {
   risk: [],
   decision: [],
   registrar: [],
+  tld: [],
+  folderId: [],
   niche: [],
   tags: [],
   currency: [],
@@ -38,6 +42,8 @@ export function countActiveFilters(filters: DomainFilters) {
   if (filters.risk.length) count += 1;
   if (filters.decision.length) count += 1;
   if (filters.registrar.length) count += 1;
+  if (filters.tld.length) count += 1;
+  if (filters.folderId.length) count += 1;
   if (filters.niche.length) count += 1;
   if (filters.tags.length) count += 1;
   if (filters.currency.length) count += 1;
@@ -72,6 +78,8 @@ export function matchesFilters(record: DerivedDomain, filters: DomainFilters): b
   if (filters.risk.length && !filters.risk.includes(record.expiryRisk)) return false;
   if (filters.decision.length && !filters.decision.includes(record.renewal_decision)) return false;
   if (filters.registrar.length && !filters.registrar.includes(record.registrar ?? "")) return false;
+  if (filters.tld.length && !filters.tld.includes(record.tld ?? "")) return false;
+  if (filters.folderId.length && !filters.folderId.includes(record.folder_id ?? "")) return false;
   if (filters.niche.length && !filters.niche.includes(record.niche ?? "")) return false;
   if (filters.currency.length && !filters.currency.includes(record.purchase_currency)) return false;
 
@@ -100,15 +108,21 @@ export function applyFilters(records: DerivedDomain[], filters: DomainFilters): 
 /** Distinct values for the facet dropdowns, drawn from the current portfolio. */
 export function facetValues(records: DerivedDomain[]) {
   const registrars = new Set<string>();
+  const tlds = new Set<string>();
+  const folders = new Set<string>();
   const niches = new Set<string>();
   const tags = new Set<string>();
   for (const record of records) {
     if (record.registrar) registrars.add(record.registrar);
+    if (record.tld) tlds.add(record.tld);
+    if (record.folder_id) folders.add(record.folder_id);
     if (record.niche) niches.add(record.niche);
     for (const tag of record.tags ?? []) tags.add(tag);
   }
   return {
     registrars: [...registrars].sort((a, b) => a.localeCompare(b)),
+    tlds: [...tlds].sort((a, b) => a.localeCompare(b)),
+    folderIds: [...folders],
     niches: [...niches].sort((a, b) => a.localeCompare(b)),
     tags: [...tags].sort((a, b) => a.localeCompare(b)),
   };

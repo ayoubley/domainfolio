@@ -5,6 +5,7 @@ import type {
   DomainInsert,
   DomainRow,
   DomainUpdate,
+  FolderRow,
   Json,
 } from "@/types/database";
 import { ACTIVITY_ACTIONS } from "@/lib/constants";
@@ -19,6 +20,8 @@ import { ACTIVITY_ACTIONS } from "@/lib/constants";
 
 const FIELD_LABELS: Partial<Record<keyof DomainRow, string>> = {
   domain: "domain",
+  folder_id: "folder",
+  registered_date: "registered_date",
   purchase_date: "purchase_date",
   expiry_date: "expiry_date",
   purchase_price: "purchase_price",
@@ -29,6 +32,14 @@ const FIELD_LABELS: Partial<Record<keyof DomainRow, string>> = {
   renewal_decision: "renewal_decision",
   listed_on: "listed_on",
   asking_price: "asking_price",
+  min_offer: "min_offer",
+  auto_renew: "auto_renew",
+  privacy: "privacy",
+  locked: "locked",
+  nameservers: "nameservers",
+  url_forwarding: "url_forwarding",
+  registry_status: "registry_status",
+  source: "source",
   sale_platform: "sale_platform",
   sale_type: "sale_type",
   sold_date: "sold_date",
@@ -45,12 +56,13 @@ const NUMERIC_FIELDS = new Set<keyof DomainRow>([
   "purchase_price",
   "renewal_cost",
   "asking_price",
+  "min_offer",
   "sale_price",
   "net_proceeds",
   "estimated_value",
 ]);
 
-const ARRAY_FIELDS = new Set<keyof DomainRow>(["listed_on", "tags"]);
+const ARRAY_FIELDS = new Set<keyof DomainRow>(["listed_on", "tags", "nameservers"]);
 
 function comparable(field: keyof DomainRow, value: unknown): unknown {
   if (value === null || value === undefined || value === "") return null;
@@ -210,6 +222,47 @@ export async function updateDomain(input: {
   return data;
 }
 
+/**
+ * Bulk create for the import wizard. One insert for the whole batch (so a
+ * 200-row import is a single round-trip, not 200) plus one activity insert.
+ */
+export async function createDomainsBulk(input: {
+  workspaceId: string;
+  userId: string;
+  rows: Record<string, unknown>[];
+}): Promise<DomainRow[]> {
+  if (input.rows.length === 0) return [];
+
+  const payload = input.rows.map(row => {
+    const cleaned = toDomainPayload(row) as DomainInsert;
+    return {
+      ...cleaned,
+      workspace_id: input.workspaceId,
+      user_id: input.userId,
+      domain: cleaned.domain as string,
+    };
+  });
+
+  const { data, error } = await supabase.from("domains").insert(payload).select("*");
+  if (error) throw error;
+
+  const created = data ?? [];
+  if (created.length > 0) {
+    await supabase.from("domain_activity").insert(
+      created.map(row => ({
+        workspace_id: input.workspaceId,
+        user_id: input.userId,
+        domain_id: row.id,
+        action: "imported" as const,
+        summary: `Imported ${row.domain}`,
+        changes: { domain: { from: null, to: row.domain } },
+      }))
+    );
+  }
+
+  return created;
+}
+
 export async function renewDomain(input: {
   domainId: string;
   renewalCost: number | null;
@@ -277,4 +330,80 @@ export async function fetchDomainActivity(domainId: string): Promise<DomainActiv
     .limit(20);
   if (error) throw error;
   return data ?? [];
+}
+
+/* -------------------------------- folders --------------------------------- */
+
+export async function fetchFolders(workspaceId: string): Promise<FolderRow[]> {
+  const { data, error } = await supabase
+    .from("folders")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function createFolder(input: {
+  workspaceId: string;
+  name: string;
+  color: string;
+}): Promise<FolderRow> {
+  const { data, error } = await supabase
+    .from("folders")
+    .insert({ workspace_id: input.workspaceId, name: input.name.trim(), color: input.color })
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateFolder(input: {
+  id: string;
+  name?: string;
+  color?: string;
+  sort_order?: number;
+}): Promise<FolderRow> {
+  const { data, error } = await supabase
+    .from("folders")
+    .update({
+      ...(input.name === undefined ? {} : { name: input.name.trim() }),
+      ...(input.color === undefined ? {} : { color: input.color }),
+      ...(input.sort_order === undefined ? {} : { sort_order: input.sort_order }),
+    })
+    .eq("id", input.id)
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteFolder(id: string): Promise<void> {
+  const { error } = await supabase.from("folders").delete().eq("id", id);
+  if (error) throw error;
+}
+
+/* ------------------------------ explicit delete ---------------------------- */
+
+/**
+ * Permanent delete. Archiving is the reversible path (and never deletes);
+ * this is the deliberate, confirmed destruction of a row, recorded in activity
+ * before the row is removed.
+ */
+export async function deleteDomain(input: {
+  workspaceId: string;
+  userId: string;
+  domain: DomainRow;
+}): Promise<void> {
+  await logActivity({
+    workspaceId: input.workspaceId,
+    userId: input.userId,
+    domainId: input.domain.id,
+    action: "updated",
+    summary: `Deleted ${input.domain.domain}`,
+    changes: { domain: { from: input.domain.domain, to: null } },
+  });
+  const { error } = await supabase.from("domains").delete().eq("id", input.domain.id);
+  if (error) throw error;
 }

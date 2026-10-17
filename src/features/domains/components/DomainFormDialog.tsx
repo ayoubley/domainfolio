@@ -19,13 +19,22 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { NICHES, PURCHASE_CURRENCIES, DOMAIN_STATUSES, RENEWAL_DECISIONS, SALE_TYPES } from "@/lib/constants";
+import {
+  NICHES,
+  PURCHASE_CURRENCIES,
+  DOMAIN_STATUSES,
+  REGISTRY_STATUSES,
+  RENEWAL_DECISIONS,
+  SALE_TYPES,
+} from "@/lib/constants";
 import { expiryAfterOneYear, getTld } from "@/lib/domain-rules";
 import { domainExists } from "@/features/domains/api";
-import { useCreateDomain, useUpdateDomain } from "@/features/domains/queries";
+import { useCreateDomain, useFoldersQuery, useUpdateDomain } from "@/features/domains/queries";
 import {
   EMPTY_DOMAIN_FORM,
   createDomainFormSchema,
@@ -38,10 +47,19 @@ import { toIsoDate } from "@/lib/format";
 import type { DomainRow, PurchaseCurrency } from "@/types/database";
 import { cn } from "@/lib/utils";
 
+const REGISTRY_NONE = "__none__";
+const REGISTRY_FLAGS = [
+  { key: "autoRenew", id: "flag-auto-renew" },
+  { key: "privacy", id: "flag-privacy" },
+  { key: "locked", id: "flag-locked" },
+] as const;
+
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   domain?: DomainRow | null;
+  /** Values layered on top of the form when it opens (e.g. "Mark as sold"). */
+  initialPatch?: Partial<DomainFormValues>;
   onSaved?: (row: DomainRow, mode: "create" | "update") => void;
 };
 
@@ -54,11 +72,22 @@ function SectionHeading({ title, hint }: { title: string; hint?: string }) {
   );
 }
 
-export function DomainFormDialog({ open, onOpenChange, domain, onSaved }: Props) {
+function boolishAdvanced(domain?: DomainRow | null, patch?: Partial<DomainFormValues>) {
+  return Boolean(
+    (domain && (domain.acquisition_source || domain.niche || domain.estimated_value || domain.tags?.length)) ||
+      patch?.acquisitionSource ||
+      patch?.niche ||
+      patch?.estimatedValue ||
+      patch?.tags?.length
+  );
+}
+
+export function DomainFormDialog({ open, onOpenChange, domain, initialPatch, onSaved }: Props) {
   const { t } = useTranslation();
   const workspaceId = useWorkspace().current?.id ?? null;
   const createMutation = useCreateDomain();
   const updateMutation = useUpdateDomain();
+  const { data: folders } = useFoldersQuery();
   const mode = domain ? "update" : "create";
   const [advanced, setAdvanced] = useState(false);
 
@@ -72,8 +101,9 @@ export function DomainFormDialog({ open, onOpenChange, domain, onSaved }: Props)
 
   useEffect(() => {
     if (!open) return;
-    form.reset(domain ? domainToFormValues(domain) : EMPTY_DOMAIN_FORM);
-    setAdvanced(Boolean(domain && (domain.acquisition_source || domain.niche || domain.estimated_value || domain.tags?.length)));
+    const base = domain ? domainToFormValues(domain) : EMPTY_DOMAIN_FORM;
+    form.reset(initialPatch ? { ...base, ...initialPatch } : base);
+    setAdvanced(boolishAdvanced(domain, initialPatch));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, domain?.id]);
 
@@ -390,6 +420,124 @@ export function DomainFormDialog({ open, onOpenChange, domain, onSaved }: Props)
                   )}
                 />
               </Field>
+            </div>
+          </section>
+
+          <Separator />
+
+          {/* Registry & flags */}
+          <section className="space-y-3">
+            <SectionHeading title={t("domains.form.registry")} hint={t("domains.form.registryHint")} />
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Field id="folderId" label={t("domains.form.folder")}>
+                <Controller
+                  control={form.control}
+                  name="folderId"
+                  render={({ field }) => (
+                    <Select
+                      value={field.value ?? REGISTRY_NONE}
+                      onValueChange={value => field.onChange(value === REGISTRY_NONE ? null : value)}
+                    >
+                      <SelectTrigger id="folderId">
+                        <SelectValue placeholder={t("domains.folder.none")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={REGISTRY_NONE}>{t("domains.folder.none")}</SelectItem>
+                        {(folders ?? []).map(folder => (
+                          <SelectItem key={folder.id} value={folder.id}>
+                            {folder.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </Field>
+              <Field id="registeredDate" label={t("domains.form.registeredDate")}>
+                <Controller
+                  control={form.control}
+                  name="registeredDate"
+                  render={({ field }) => (
+                    <DatePicker id="registeredDate" value={field.value} onChange={field.onChange} />
+                  )}
+                />
+              </Field>
+              <Field id="minOffer" label={t("domains.form.minOffer")} error={errorFor("minOffer")}>
+                <Controller
+                  control={form.control}
+                  name="minOffer"
+                  render={({ field }) => (
+                    <CurrencyInput id="minOffer" value={field.value} onValueChange={field.onChange} currency={currency} />
+                  )}
+                />
+              </Field>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field
+                id="registryStatus"
+                label={t("domains.form.registryStatus")}
+                hint={t("domains.form.registryStatusHint")}
+              >
+                <Controller
+                  control={form.control}
+                  name="registryStatus"
+                  render={({ field }) => (
+                    <Select
+                      value={field.value || REGISTRY_NONE}
+                      onValueChange={value => field.onChange(value === REGISTRY_NONE ? "" : value)}
+                    >
+                      <SelectTrigger id="registryStatus">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={REGISTRY_NONE}>{t("domains.filters.any")}</SelectItem>
+                        {REGISTRY_STATUSES.map(status => (
+                          <SelectItem key={status} value={status}>
+                            {t(`lifecycle.${status}`)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </Field>
+              <Field id="urlForwarding" label={t("domains.form.urlForwarding")} error={errorFor("urlForwarding")}>
+                <Input id="urlForwarding" placeholder="https://…" spellCheck={false} {...form.register("urlForwarding")} />
+              </Field>
+            </div>
+
+            <Field id="nameservers" label={t("domains.form.nameservers")}>
+              <Controller
+                control={form.control}
+                name="nameservers"
+                render={({ field }) => (
+                  <TagInput
+                    id="nameservers"
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder={t("domains.ns.placeholder")}
+                  />
+                )}
+              />
+            </Field>
+
+            <div className="grid gap-2 sm:grid-cols-3">
+              {REGISTRY_FLAGS.map(({ key, id }) => (
+                <Controller
+                  key={key}
+                  control={form.control}
+                  name={key}
+                  render={({ field }) => (
+                    <div className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
+                      <Label htmlFor={id} className="cursor-pointer text-2sm font-normal">
+                        {t(`domains.form.${key}`)}
+                      </Label>
+                      <Switch id={id} checked={Boolean(field.value)} onCheckedChange={field.onChange} />
+                    </div>
+                  )}
+                />
+              ))}
             </div>
           </section>
 

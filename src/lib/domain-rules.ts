@@ -15,6 +15,9 @@ import type { DomainRow, DomainStatus, RenewalDecision } from "@/types/database"
 
 export type ExpiryRisk = "expired" | "0-30" | "31-60" | "61-90" | "91-180" | "180+" | "missing";
 
+/** Registry lifecycle tone shown as a badge next to the domain name. */
+export type LifecycleTone = "redemption" | "expired" | "grace" | "hold";
+
 export type RecommendedAction =
   | "renew"
   | "review"
@@ -46,6 +49,8 @@ export type DerivedDomain = DomainRow & {
   holdingDays: number | null;
   qualityIssues: QualityIssue[];
   recommendedAction: RecommendedAction;
+  /** Registry lifecycle tone (redemption/expired/grace/hold). Null = healthy. */
+  lifecycle: LifecycleTone | null;
 };
 
 /* ------------------------------- primitives ------------------------------- */
@@ -60,6 +65,13 @@ export function moneyNumber(value: unknown): number | null {
 /** Trim, lowercase and strip a trailing dot so "Example.COM." === "example.com". */
 export function normalizeDomain(value: string): string {
   return value.trim().toLowerCase().replace(/\.$/, "");
+}
+
+const DOMAIN_NAME_PATTERN = /^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/;
+
+/** True when `value` normalises to a syntactically valid domain name. */
+export function isValidDomainName(value: string): boolean {
+  return DOMAIN_NAME_PATTERN.test(normalizeDomain(value));
 }
 
 /** The suffix after the final dot, including the dot. Null when absent. */
@@ -109,6 +121,22 @@ export function getExpiryRisk(daysLeft: number | null): ExpiryRisk {
   if (daysLeft <= 90) return "61-90";
   if (daysLeft <= 180) return "91-180";
   return "180+";
+}
+
+/** Maps a stored registry status to the lifecycle badge tone. Healthy → null. */
+export function domainLifecycle(registryStatus: string | null): LifecycleTone | null {
+  switch (registryStatus) {
+    case "redemption":
+      return "redemption";
+    case "expired":
+      return "expired";
+    case "grace":
+      return "grace";
+    case "hold":
+      return "hold";
+    default:
+      return null;
+  }
 }
 
 const ROUND = (value: number) => Number(value.toFixed(2));
@@ -185,6 +213,7 @@ export function deriveDomain(record: DomainRow, now: Date = new Date()): Derived
     sale_price: salePrice,
     net_proceeds: netProceeds,
     estimated_value: estimatedValue,
+    min_offer: moneyNumber(record.min_offer),
     daysLeft,
     expiryRisk,
     effectiveStatus,
@@ -194,6 +223,7 @@ export function deriveDomain(record: DomainRow, now: Date = new Date()): Derived
     holdingDays,
     qualityIssues,
     recommendedAction,
+    lifecycle: domainLifecycle(record.registry_status),
   };
 }
 
