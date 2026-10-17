@@ -33,7 +33,7 @@ import {
   StatusMixChart,
 } from "@/features/dashboard/PortfolioCharts";
 import { useActivityQuery, useDomainsQuery, useLoadDemoData } from "@/features/domains/queries";
-import { DomainFormDialog } from "@/features/domains/components/DomainFormDialog";
+import { ImportDomainsDialog } from "@/features/domains/components/ImportDomainsDialog";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { deriveDomains, summarizePortfolio } from "@/lib/domain-rules";
@@ -47,7 +47,7 @@ export function DashboardPage() {
   const navigate = useNavigate();
   const { profile, user } = useAuth();
   const workspace = useWorkspace().current;
-  const [createOpen, setCreateOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const { data: rows, isLoading, isError, refetch, isFetching } = useDomainsQuery();
   const { data: activity, isLoading: activityLoading } = useActivityQuery(8);
@@ -96,7 +96,7 @@ export function DashboardPage() {
               </Button>
             }
             secondaryAction={
-              <Button variant="outline" onClick={() => navigate("/domains")}>
+              <Button variant="outline" onClick={() => setImportOpen(true)}>
                 <Plus />
                 {t("domains.addDomain")}
               </Button>
@@ -118,7 +118,7 @@ export function DashboardPage() {
               <Repeat />
               {t("dashboard.reviewRenewals")}
             </Button>
-            <Button variant="primary" onClick={() => setCreateOpen(true)}>
+            <Button variant="primary" onClick={() => setImportOpen(true)}>
               <Plus />
               {t("domains.addDomain")}
             </Button>
@@ -336,14 +336,7 @@ export function DashboardPage() {
         {signedMoney(summary.netProfit, currency)}
       </div>
 
-      <DomainFormDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        onSaved={() => {
-          toast.success(t("dashboard.addedRedirect"));
-          navigate("/domains");
-        }}
-      />
+      <ImportDomainsDialog open={importOpen} onOpenChange={setImportOpen} />
     </div>
   );
 }

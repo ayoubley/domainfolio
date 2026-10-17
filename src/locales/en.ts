@@ -201,7 +201,6 @@ export const en = {
   dashboard: {
     title: "Dashboard",
     subtitle: "A live read on your portfolio.",
-    addedRedirect: "Domain added — opening your portfolio.",
     greetingMorning: "Good morning",
     greetingAfternoon: "Good afternoon",
     greetingEvening: "Good evening",
@@ -326,7 +325,6 @@ export const en = {
       done_one: "Imported {{count}} domain.",
       done_other: "Imported {{count}} domains.",
       duplicateHint: "Some of those domains are already in your portfolio.",
-      singleInstead: "Add one domain in detail",
       confirm_one: "Import {{count}} domain",
       confirm_other: "Import {{count}} domains",
     },

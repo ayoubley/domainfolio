@@ -216,7 +216,6 @@ export const ar: LooseDeep<TranslationResource> = {
   dashboard: {
     title: "لوحة التحكم",
     subtitle: "قراءة حيّة لمحفظتك.",
-    addedRedirect: "تمت إضافة النطاق — جارٍ فتح محفظتك.",
     greetingMorning: "صباح الخير",
     greetingAfternoon: "طاب يومك",
     greetingEvening: "مساء الخير",
@@ -369,7 +368,6 @@ export const ar: LooseDeep<TranslationResource> = {
       done_many: "تم استيراد {{count}} نطاقًا.",
       done_other: "تم استيراد {{count}} نطاق.",
       duplicateHint: "بعض هذه النطاقات موجودة لدى محفظتك.",
-      singleInstead: "إضافة نطاق واحد بالتفصيل",
       confirm_zero: "لا شيء للاستيراد",
       confirm_one: "استيراد نطاق واحد",
       confirm_two: "استيراد نطاقين",

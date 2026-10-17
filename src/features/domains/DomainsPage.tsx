@@ -64,7 +64,6 @@ export function DomainsPage() {
     DEFAULT_COLUMN_VISIBILITY
   );
 
-  const [createOpen, setCreateOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] = useState<DerivedDomain | null>(null);
   const [soldTarget, setSoldTarget] = useState<DerivedDomain | null>(null);
@@ -358,10 +357,9 @@ export function DomainsPage() {
       />
 
       <DomainFormDialog
-        open={createOpen || Boolean(editing) || Boolean(soldTarget)}
+        open={Boolean(editing) || Boolean(soldTarget)}
         onOpenChange={open => {
           if (!open) {
-            setCreateOpen(false);
             setEditing(null);
             setSoldTarget(null);
           }
@@ -379,14 +377,7 @@ export function DomainsPage() {
         }}
       />
 
-      <ImportDomainsDialog
-        open={importOpen}
-        onOpenChange={setImportOpen}
-        onRequestSingle={() => {
-          setEditing(null);
-          setCreateOpen(true);
-        }}
-      />
+      <ImportDomainsDialog open={importOpen} onOpenChange={setImportOpen} />
 
       {/* ---------------------------- row-action dialogs ---------------------------- */}
 

@@ -62,17 +62,16 @@ function emptyDefaults(): ImportDefaults {
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Offered as a secondary path for a rich single-domain record. */
-  onRequestSingle?: () => void;
   onImported?: (count: number) => void;
 };
 
 /**
- * Two ways in, one pipeline out: a pasted list of names or a spreadsheet.
- * Everything funnels through `resolveImportRows`, so both tabs share the same
- * Zod validation, duplicate detection and summary.
+ * The one and only "add domains" flow: two tabs (a pasted list of names or a
+ * spreadsheet) over a shared defaults block. Everything funnels through
+ * `resolveImportRows`, so both tabs share the same Zod validation, duplicate
+ * detection and summary.
  */
-export function ImportDomainsDialog({ open, onOpenChange, onRequestSingle, onImported }: Props) {
+export function ImportDomainsDialog({ open, onOpenChange, onImported }: Props) {
   const { t } = useTranslation();
   const bulkCreate = useBulkCreateDomains();
   const { data: allDomains } = useDomainsQuery(true);
@@ -496,20 +495,6 @@ export function ImportDomainsDialog({ open, onOpenChange, onRequestSingle, onImp
         ) : null}
 
         <DialogFooter className="gap-2">
-          {onRequestSingle ? (
-            <Button
-              type="button"
-              variant="link"
-              className="me-auto px-0"
-              disabled={busy}
-              onClick={() => {
-                onOpenChange(false);
-                onRequestSingle();
-              }}
-            >
-              {t("domains.import.singleInstead")}
-            </Button>
-          ) : null}
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
             {t("common.cancel")}
           </Button>

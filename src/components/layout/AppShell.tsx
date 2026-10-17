@@ -7,7 +7,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { ShortcutsDialog } from "@/components/layout/ShortcutsDialog";
 import { Topbar, type Crumb } from "@/components/layout/Topbar";
 import { RouteErrorBoundary } from "@/components/shared/RouteErrorBoundary";
-import { DomainFormDialog } from "@/features/domains/components/DomainFormDialog";
+import { ImportDomainsDialog } from "@/features/domains/components/ImportDomainsDialog";
 import { useDomainsQuery } from "@/features/domains/queries";
 import { deriveDomains, summarizePortfolio } from "@/lib/domain-rules";
 import { APP_EVENTS, emit } from "@/lib/events";
@@ -34,7 +34,7 @@ export function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
-  const [createOpen, setCreateOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const { data: rows } = useDomainsQuery();
   const derived = useMemo(() => deriveDomains(rows ?? []), [rows]);
@@ -76,7 +76,7 @@ export function AppShell() {
 
       if (event.key.toLowerCase() === "n") {
         event.preventDefault();
-        setCreateOpen(true);
+        setImportOpen(true);
         return;
       }
 
@@ -145,7 +145,7 @@ export function AppShell() {
           onOpenMenu={() => setMobileOpen(true)}
           onOpenCommand={() => setCommandOpen(true)}
           onOpenShortcuts={() => setShortcutsOpen(true)}
-          onNewDomain={() => setCreateOpen(true)}
+          onNewDomain={() => setImportOpen(true)}
         />
         <main className="flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-[1400px] p-4 sm:p-6">
@@ -160,14 +160,14 @@ export function AppShell() {
         open={commandOpen}
         onOpenChange={setCommandOpen}
         domains={derived}
-        onNewDomain={() => setCreateOpen(true)}
+        onNewDomain={() => setImportOpen(true)}
         onExport={() => {
           navigate("/domains");
           window.setTimeout(() => emit(APP_EVENTS.exportView), 80);
         }}
       />
       <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
-      <DomainFormDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <ImportDomainsDialog open={importOpen} onOpenChange={setImportOpen} />
     </div>
   );
 }
