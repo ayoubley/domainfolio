@@ -502,6 +502,16 @@ export const en = {
       title: "Notes",
       body: "Private notes about {{domain}}.",
     },
+    sold: {
+      title: "Mark as Sold",
+      body: "Moves to Archive as Sold. Nothing changes at the registrar.",
+      date: "Sale date",
+      amount: "Sale amount",
+      currency: "Currency",
+      notes: "Notes",
+      confirm: "Mark as Sold",
+      done: "{{domain}} was marked as sold and moved to the archive.",
+    },
     actions: {
       renew: "Renew…",
       purchaseDetails: "Purchase details…",
@@ -558,6 +568,10 @@ export const en = {
   archive: {
     title: "Archive",
     subtitle: "Domains you've parked. Nothing is ever deleted.",
+    archivedOn: "Archived on",
+    emptyTitle: "Nothing archived yet",
+    emptyBody:
+      "Domains you archive, drop or sell land here, and any of them can be restored to the live portfolio.",
   },
 
   activity: {

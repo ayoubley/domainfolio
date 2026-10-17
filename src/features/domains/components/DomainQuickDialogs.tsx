@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { PURCHASE_CURRENCIES } from "@/lib/constants";
 import type { DerivedDomain } from "@/lib/domain-rules";
+import { toIsoDate } from "@/lib/format";
 import type { PurchaseCurrency } from "@/types/database";
 
 /* ---------------------------- purchase details ----------------------------- */
@@ -315,6 +316,111 @@ export function RenewDomainDialog({
           </Button>
           <Button variant="primary" onClick={() => void submit()} loading={busy}>
             {t("domains.renew.confirm")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ------------------------------- mark as sold ------------------------------ */
+
+/**
+ * The one-screen sale record: date, amount, currency and a note. Saving marks
+ * the domain as sold and parks it in the archive, exactly as the copy says.
+ */
+export function MarkAsSoldDialog({
+  open,
+  onOpenChange,
+  domain,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  domain: DerivedDomain | null;
+  onConfirm: (input: {
+    soldDate: string | null;
+    salePrice: number | null;
+    currency: PurchaseCurrency;
+    notes: string;
+  }) => Promise<void> | void;
+}) {
+  const { t } = useTranslation();
+  const [soldDate, setSoldDate] = useState<string | null>(null);
+  const [salePrice, setSalePrice] = useState<number | null>(null);
+  const [currency, setCurrency] = useState<PurchaseCurrency>("USD");
+  const [notes, setNotes] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setSoldDate(domain?.sold_date ?? toIsoDate(new Date()));
+    setSalePrice(domain?.sale_price ?? null);
+    setCurrency(domain?.purchase_currency ?? "USD");
+    setNotes(domain?.notes ?? "");
+  }, [open, domain?.id, domain?.sold_date, domain?.sale_price, domain?.purchase_currency, domain?.notes]);
+
+  async function submit() {
+    try {
+      setBusy(true);
+      await onConfirm({ soldDate: soldDate || null, salePrice, currency, notes: notes.trim() });
+      onOpenChange(false);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={busy ? undefined : onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t("domains.sold.title")}</DialogTitle>
+          <DialogDescription className="space-y-1">
+            <span dir="ltr" className="block font-medium tabular text-foreground">
+              {domain?.domain ?? ""}
+            </span>
+            <span className="block">{t("domains.sold.body")}</span>
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          <Field id="sold-date" label={t("domains.sold.date")}>
+            <DatePicker id="sold-date" value={soldDate} onChange={setSoldDate} />
+          </Field>
+          <Field id="sold-amount" label={t("domains.sold.amount")}>
+            <CurrencyInput id="sold-amount" value={salePrice} onValueChange={setSalePrice} currency={currency} />
+          </Field>
+          <Field id="sold-currency" label={t("domains.sold.currency")}>
+            <Select value={currency} onValueChange={value => setCurrency(value as PurchaseCurrency)}>
+              <SelectTrigger id="sold-currency">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PURCHASE_CURRENCIES.map(code => (
+                  <SelectItem key={code} value={code}>
+                    {code} · {t(`currency.${code}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field id="sold-notes" label={t("domains.sold.notes")}>
+            <Textarea
+              id="sold-notes"
+              rows={3}
+              placeholder={t("domains.form.notesPlaceholder")}
+              value={notes}
+              onChange={event => setNotes(event.target.value)}
+            />
+          </Field>
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
+            {t("common.cancel")}
+          </Button>
+          <Button variant="primary" onClick={() => void submit()} loading={busy}>
+            {t("domains.sold.confirm")}
           </Button>
         </DialogFooter>
       </DialogContent>

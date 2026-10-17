@@ -556,6 +556,16 @@ export const ar: LooseDeep<TranslationResource> = {
       title: "الملاحظات",
       body: "ملاحظات خاصة عن {{domain}}.",
     },
+    sold: {
+      title: "وضع علامة كمُباع",
+      body: "ينتقل إلى الأرشيف كمُباع. لا يتغيّر شيء لدى المسجّل.",
+      date: "تاريخ البيع",
+      amount: "مبلغ البيع",
+      currency: "العملة",
+      notes: "ملاحظات",
+      confirm: "وضع علامة كمُباع",
+      done: "تم وضع علامة البيع على {{domain}} ونقله إلى الأرشيف.",
+    },
     actions: {
       renew: "تجديد…",
       purchaseDetails: "تفاصيل الشراء…",
@@ -612,6 +622,9 @@ export const ar: LooseDeep<TranslationResource> = {
   archive: {
     title: "الأرشيف",
     subtitle: "النطاقات التي أوقفتها. لا يُحذف شيء أبدًا.",
+    archivedOn: "تاريخ الأرشفة",
+    emptyTitle: "لا يوجد شيء في الأرشيف بعد",
+    emptyBody: "تظهر هنا النطاقات التي تؤرشفها أو تعلّمها كمُسقطة أو كمُباعة، ويمكنك استعادة أي منها إلى المحفظة النشطة.",
   },
 
   activity: {

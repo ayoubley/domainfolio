@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { VisibilityState } from "@tanstack/react-table";
 import { Archive, ArchiveRestore, Download, FolderOpen, Sparkles, Tag } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { DataTable } from "@/components/shared/DataTable";
@@ -17,6 +17,7 @@ import { DomainFormDialog } from "@/features/domains/components/DomainFormDialog
 import { ImportDomainsDialog } from "@/features/domains/components/ImportDomainsDialog";
 import { DomainSidePeek } from "@/features/domains/components/DomainSidePeek";
 import {
+  MarkAsSoldDialog,
   NotesDialog,
   PricingDialog,
   PurchaseDetailsDialog,
@@ -44,7 +45,6 @@ import type { DerivedDomain } from "@/lib/domain-rules";
 import { APP_EVENTS, onAppEvent } from "@/lib/events";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useWorkspace } from "@/hooks/useWorkspace";
-import { toIsoDate } from "@/lib/format";
 import type { DomainUpdate } from "@/types/database";
 
 const DEFAULT_COLUMN_VISIBILITY: VisibilityState = DEFAULT_VISIBLE_COLUMNS.reduce<VisibilityState>(
@@ -56,6 +56,7 @@ export function DomainsPage() {
   const { t } = useTranslation();
   const workspace = useWorkspace().current;
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const [filters, setFilters] = useState<DomainFilters>(EMPTY_FILTERS);
   const [view, setView] = useLocalStorage<DomainView>("domainfolio.domains-view", "table");
@@ -124,9 +125,9 @@ export function DomainsPage() {
   );
 
   const runArchive = useCallback(
-    async (domain: DerivedDomain, reason?: string | null) => {
+    async (domain: DerivedDomain, reason?: string | null, message?: string) => {
       await archiveMutation.mutateAsync({ domainId: domain.id, reason: reason ?? null });
-      toast(t("domains.detail.archived", { domain: domain.domain }), {
+      toast(message ?? t("domains.detail.archived", { domain: domain.domain }), {
         action: {
           label: t("common.undo"),
           onClick: () => {
@@ -136,6 +137,15 @@ export function DomainsPage() {
       });
     },
     [archiveMutation, restoreMutation, t]
+  );
+
+  /** Archiving parks the domain, so we take the user straight to the archive. */
+  const archiveAndOpenArchive = useCallback(
+    async (domain: DerivedDomain, reason?: string | null, message?: string) => {
+      await runArchive(domain, reason, message);
+      navigate("/archive");
+    },
+    [runArchive, navigate]
   );
 
   const renderActions = useCallback(
@@ -148,7 +158,7 @@ export function DomainsPage() {
           onPricing: () => setPricingTarget(domain),
           onNotes: () => setNotesTarget(domain),
           onMarkSold: () => setSoldTarget(domain),
-          onMarkDropped: () => void runArchive(domain, "dropped"),
+          onMarkDropped: () => void archiveAndOpenArchive(domain, "dropped"),
           onArchive: () => {
             setArchiveReason("");
             setArchiveTarget(domain);
@@ -157,7 +167,7 @@ export function DomainsPage() {
         }}
       />
     ),
-    [runArchive]
+    [archiveAndOpenArchive]
   );
 
   const columns = useMemo(
@@ -357,23 +367,44 @@ export function DomainsPage() {
       />
 
       <DomainFormDialog
-        open={Boolean(editing) || Boolean(soldTarget)}
+        open={Boolean(editing)}
         onOpenChange={open => {
-          if (!open) {
-            setEditing(null);
-            setSoldTarget(null);
-          }
+          if (!open) setEditing(null);
         }}
-        domain={editing ?? soldTarget ?? undefined}
-        initialPatch={
-          soldTarget ? { status: "sold", soldDate: toIsoDate(new Date()) } : undefined
-        }
+        domain={editing ?? undefined}
         onSaved={row => {
           const derivedRow = deriveDomain(row);
           const wasSold = editing?.effectiveStatus === "sold";
           if (derivedRow.effectiveStatus === "sold" && !wasSold) {
             setConfettiFire(value => value + 1);
           }
+        }}
+      />
+
+      <MarkAsSoldDialog
+        open={Boolean(soldTarget)}
+        onOpenChange={open => {
+          if (!open) setSoldTarget(null);
+        }}
+        domain={soldTarget}
+        onConfirm={async ({ soldDate, salePrice, currency, notes }) => {
+          if (!soldTarget) return;
+          await quickUpdate.mutateAsync({
+            previous: soldTarget,
+            values: {
+              status: "sold",
+              sold_date: soldDate,
+              sale_price: salePrice,
+              purchase_currency: currency,
+              notes: notes || null,
+            },
+          });
+          await archiveAndOpenArchive(
+            soldTarget,
+            "sold",
+            t("domains.sold.done", { domain: soldTarget.domain })
+          );
+          setSoldTarget(null);
         }}
       />
 
@@ -462,7 +493,7 @@ export function DomainsPage() {
         confirmLabel={t("domains.detail.archive")}
         onConfirm={async () => {
           if (!archiveTarget) return;
-          await runArchive(archiveTarget, archiveReason.trim() || null);
+          await archiveAndOpenArchive(archiveTarget, archiveReason.trim() || null);
           setArchiveTarget(null);
         }}
       >

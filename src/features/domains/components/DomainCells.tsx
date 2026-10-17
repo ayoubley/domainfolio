@@ -43,11 +43,15 @@ export function AutoRenewSwitch({
 }) {
   const { t } = useTranslation();
   return (
-    <Switch
-      checked={checked}
-      onCheckedChange={onCheckedChange}
-      disabled={disabled}
-      aria-label={t("domains.form.autoRenew")}
-    />
+    // Toggling must never bubble to the row click, otherwise the domain detail
+    // panel slides in every time the switch is flipped.
+    <span className="inline-flex" onClick={event => event.stopPropagation()}>
+      <Switch
+        checked={checked}
+        onCheckedChange={onCheckedChange}
+        disabled={disabled}
+        aria-label={t("domains.form.autoRenew")}
+      />
+    </span>
   );
 }
