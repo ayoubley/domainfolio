@@ -17,10 +17,10 @@ import { DomainFormDialog } from "@/features/domains/components/DomainFormDialog
 import { ImportDomainsDialog } from "@/features/domains/components/ImportDomainsDialog";
 import { DomainSidePeek } from "@/features/domains/components/DomainSidePeek";
 import {
-  NameserversDialog,
-  NewFolderDialog,
+  NotesDialog,
+  PricingDialog,
+  PurchaseDetailsDialog,
   RenewDomainDialog,
-  UrlForwardingDialog,
 } from "@/features/domains/components/DomainQuickDialogs";
 import { RowActionsMenu } from "@/features/domains/components/RowActionsMenu";
 import { DomainsToolbar, type DomainView } from "@/features/domains/components/DomainsToolbar";
@@ -31,7 +31,6 @@ import {
   useArchiveDomain,
   useBulkArchiveDomains,
   useBulkRestoreDomains,
-  useCreateFolder,
   useDeleteDomain,
   useDomainsQuery,
   useFoldersQuery,
@@ -74,13 +73,12 @@ export function DomainsPage() {
   const [confettiFire, setConfettiFire] = useState(0);
 
   // Row-action dialogs
-  const [urlTarget, setUrlTarget] = useState<DerivedDomain | null>(null);
-  const [nsTarget, setNsTarget] = useState<DerivedDomain | null>(null);
   const [renewTarget, setRenewTarget] = useState<DerivedDomain | null>(null);
+  const [purchaseTarget, setPurchaseTarget] = useState<DerivedDomain | null>(null);
+  const [pricingTarget, setPricingTarget] = useState<DerivedDomain | null>(null);
+  const [notesTarget, setNotesTarget] = useState<DerivedDomain | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<DerivedDomain | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DerivedDomain | null>(null);
-  const [newFolderFor, setNewFolderFor] = useState<DerivedDomain | null>(null);
-  const [newFolderOpen, setNewFolderOpen] = useState(false);
   const [archiveReason, setArchiveReason] = useState("");
 
   const { data: rows, isLoading, isError, refetch, isFetching } = useDomainsQuery(filters.includeArchived);
@@ -93,7 +91,6 @@ export function DomainsPage() {
   const restoreMutation = useRestoreDomain();
   const deleteMutation = useDeleteDomain();
   const renewMutation = useRenewDomain();
-  const createFolder = useCreateFolder();
 
   const derived = useMemo(() => deriveDomains(rows ?? []), [rows]);
   const filtered = useMemo(() => applyFilters(derived, filters), [derived, filters]);
@@ -146,19 +143,12 @@ export function DomainsPage() {
     (domain: DerivedDomain) => (
       <RowActionsMenu
         domain={domain}
-        folders={folders ?? []}
         handlers={{
-          onRefresh: () => void refetch(),
-          onOpenDetail: () => setEditing(domain),
-          onOpenUrlForwarding: () => setUrlTarget(domain),
-          onOpenNameservers: () => setNsTarget(domain),
           onRenew: () => setRenewTarget(domain),
+          onPurchaseDetails: () => setPurchaseTarget(domain),
+          onPricing: () => setPricingTarget(domain),
+          onNotes: () => setNotesTarget(domain),
           onMarkSold: () => setSoldTarget(domain),
-          onAssignFolder: folderId => quickUpdateDomain(domain, { folder_id: folderId }),
-          onNewFolder: () => {
-            setNewFolderFor(domain);
-            setNewFolderOpen(true);
-          },
           onMarkDropped: () => void runArchive(domain, "dropped"),
           onArchive: () => {
             setArchiveReason("");
@@ -168,26 +158,18 @@ export function DomainsPage() {
         }}
       />
     ),
-    [folders, quickUpdateDomain, refetch, runArchive]
+    [runArchive]
   );
 
   const columns = useMemo(
     () =>
       createDomainColumns({
         t,
-        folders: folders ?? [],
         onQuickUpdate: quickUpdateDomain,
-        onAssignFolder: (domain, folderId) => quickUpdateDomain(domain, { folder_id: folderId }),
-        onNewFolder: domain => {
-          setNewFolderFor(domain);
-          setNewFolderOpen(true);
-        },
         onOpenDetail: domain => setEditing(domain),
-        onOpenUrlForwarding: domain => setUrlTarget(domain),
-        onOpenNameservers: domain => setNsTarget(domain),
         renderActions,
       }),
-    [t, folders, quickUpdateDomain, renderActions]
+    [t, quickUpdateDomain, renderActions]
   );
 
   const columnPicker = useMemo(
@@ -348,7 +330,7 @@ export function DomainsPage() {
           onSelectionChange={setSelected}
           columnVisibility={effectiveColumnVisibility}
           onColumnVisibilityChange={setColumnVisibility}
-          initialSorting={[{ id: "daysLeft", desc: false }]}
+          initialSorting={[{ id: "expiryDate", desc: false }]}
           renderMobileCard={domain => <DomainCard domain={domain} onOpen={() => handlePeek(domain)} />}
           emptyState={
             <EmptyState
@@ -408,32 +390,56 @@ export function DomainsPage() {
 
       {/* ---------------------------- row-action dialogs ---------------------------- */}
 
-      <UrlForwardingDialog
-        open={Boolean(urlTarget)}
+      <PurchaseDetailsDialog
+        open={Boolean(purchaseTarget)}
         onOpenChange={open => {
-          if (!open) setUrlTarget(null);
+          if (!open) setPurchaseTarget(null);
         }}
-        domain={urlTarget}
-        onSave={async value => {
-          if (!urlTarget) return;
+        domain={purchaseTarget}
+        onSave={async ({ purchasePrice, purchaseDate, registrar, currency }) => {
+          if (!purchaseTarget) return;
           await quickUpdate.mutateAsync({
-            previous: urlTarget,
-            values: { url_forwarding: value.trim() || null },
+            previous: purchaseTarget,
+            values: {
+              purchase_price: purchasePrice,
+              purchase_date: purchaseDate,
+              registrar: registrar || null,
+              purchase_currency: currency,
+            },
           });
-          toast.success(t("domains.url.saved"));
+          toast.success(t("domains.detail.updated", { domain: purchaseTarget.domain }));
         }}
       />
 
-      <NameserversDialog
-        open={Boolean(nsTarget)}
+      <PricingDialog
+        open={Boolean(pricingTarget)}
         onOpenChange={open => {
-          if (!open) setNsTarget(null);
+          if (!open) setPricingTarget(null);
         }}
-        domain={nsTarget}
-        onSave={async nameservers => {
-          if (!nsTarget) return;
-          await quickUpdate.mutateAsync({ previous: nsTarget, values: { nameservers } });
-          toast.success(t("domains.ns.saved"));
+        domain={pricingTarget}
+        onSave={async ({ askingPrice, minOffer }) => {
+          if (!pricingTarget) return;
+          await quickUpdate.mutateAsync({
+            previous: pricingTarget,
+            values: { asking_price: askingPrice, min_offer: minOffer },
+          });
+          toast.success(t("domains.detail.updated", { domain: pricingTarget.domain }));
+        }}
+      />
+
+      <NotesDialog
+        open={Boolean(notesTarget)}
+        onOpenChange={open => {
+          if (!open) setNotesTarget(null);
+        }}
+        domain={notesTarget}
+        onSave={async notes => {
+          if (!notesTarget) return;
+          await quickUpdate.mutateAsync({
+            previous: notesTarget,
+            values: { notes: notes || null },
+          });
+          toast.success(t("domains.detail.updated", { domain: notesTarget.domain }));
         }}
       />
 
@@ -452,21 +458,6 @@ export function DomainsPage() {
             note,
           });
           toast.success(t("domains.detail.renewed", { domain: updated.domain, date: updated.expiry_date ?? "" }));
-        }}
-      />
-
-      <NewFolderDialog
-        open={newFolderOpen}
-        onOpenChange={open => {
-          setNewFolderOpen(open);
-          if (!open) setNewFolderFor(null);
-        }}
-        onCreate={async ({ name, color }) => {
-          const folder = await createFolder.mutateAsync({ name, color });
-          toast.success(t("domains.folder.created", { name: folder.name }));
-          if (newFolderFor) {
-            await quickUpdate.mutateAsync({ previous: newFolderFor, values: { folder_id: folder.id } });
-          }
         }}
       />
 

@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CurrencyInput } from "@/components/shared/CurrencyInput";
+import { DatePicker } from "@/components/shared/DatePicker";
 import { Field } from "@/components/shared/Field";
-import { TagInput } from "@/components/shared/TagInput";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,108 +13,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { FOLDER_COLORS, DEFAULT_FOLDER_COLOR } from "@/lib/constants";
-import { folderColorClass } from "@/features/domains/folder-colors";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { PURCHASE_CURRENCIES } from "@/lib/constants";
 import type { DerivedDomain } from "@/lib/domain-rules";
-import { cn } from "@/lib/utils";
+import type { PurchaseCurrency } from "@/types/database";
 
-/* ------------------------------- new folder -------------------------------- */
+/* ---------------------------- purchase details ----------------------------- */
 
-export function NewFolderDialog({
-  open,
-  onOpenChange,
-  onCreate,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onCreate: (input: { name: string; color: string }) => Promise<void> | void;
-}) {
-  const { t } = useTranslation();
-  const [name, setName] = useState("");
-  const [color, setColor] = useState<string>(DEFAULT_FOLDER_COLOR);
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    if (open) {
-      setName("");
-      setColor(DEFAULT_FOLDER_COLOR);
-    }
-  }, [open]);
-
-  async function submit() {
-    if (!name.trim()) return;
-    try {
-      setBusy(true);
-      await onCreate({ name: name.trim(), color });
-      onOpenChange(false);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={busy ? undefined : onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{t("domains.folder.newTitle")}</DialogTitle>
-          <DialogDescription>{t("domains.folder.newBody")}</DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-3">
-          <Field id="folder-name" label={t("domains.folder.name")} required>
-            <Input
-              id="folder-name"
-              autoFocus
-              value={name}
-              maxLength={80}
-              placeholder={t("domains.folder.namePlaceholder")}
-              onChange={event => setName(event.target.value)}
-              onKeyDown={event => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  void submit();
-                }
-              }}
-            />
-          </Field>
-
-          <Field id="folder-color" label={t("domains.folder.color")}>
-            <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={t("domains.folder.color")}>
-              {FOLDER_COLORS.map(option => (
-                <button
-                  key={option}
-                  type="button"
-                  role="radio"
-                  aria-checked={color === option}
-                  aria-label={option}
-                  onClick={() => setColor(option)}
-                  className={cn(
-                    "size-6 rounded-full ring-offset-2 ring-offset-popover transition-all",
-                    folderColorClass(option).dot,
-                    color === option ? "ring-2 ring-ring" : "opacity-70 hover:opacity-100"
-                  )}
-                />
-              ))}
-            </div>
-          </Field>
-        </div>
-
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
-            {t("common.cancel")}
-          </Button>
-          <Button variant="primary" onClick={() => void submit()} loading={busy} disabled={!name.trim()}>
-            {t("common.create")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-/* ----------------------------- URL forwarding ------------------------------ */
-
-export function UrlForwardingDialog({
+export function PurchaseDetailsDialog({
   open,
   onOpenChange,
   domain,
@@ -123,20 +30,32 @@ export function UrlForwardingDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   domain: DerivedDomain | null;
-  onSave: (value: string) => Promise<void> | void;
+  onSave: (input: {
+    purchasePrice: number | null;
+    purchaseDate: string | null;
+    registrar: string;
+    currency: PurchaseCurrency;
+  }) => Promise<void> | void;
 }) {
   const { t } = useTranslation();
-  const [value, setValue] = useState("");
+  const [price, setPrice] = useState<number | null>(null);
+  const [date, setDate] = useState<string | null>(null);
+  const [registrar, setRegistrar] = useState("");
+  const [currency, setCurrency] = useState<PurchaseCurrency>("USD");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (open) setValue(domain?.url_forwarding ?? "");
-  }, [open, domain?.id, domain?.url_forwarding]);
+    if (!open) return;
+    setPrice(domain?.purchase_price ?? null);
+    setDate(domain?.purchase_date ?? null);
+    setRegistrar(domain?.registrar ?? "");
+    setCurrency(domain?.purchase_currency ?? "USD");
+  }, [open, domain?.id, domain?.purchase_price, domain?.purchase_date, domain?.registrar, domain?.purchase_currency]);
 
   async function submit() {
     try {
       setBusy(true);
-      await onSave(value.trim());
+      await onSave({ purchasePrice: price, purchaseDate: date, registrar: registrar.trim(), currency });
       onOpenChange(false);
     } finally {
       setBusy(false);
@@ -145,31 +64,45 @@ export function UrlForwardingDialog({
 
   return (
     <Dialog open={open} onOpenChange={busy ? undefined : onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{t("domains.url.title")}</DialogTitle>
+          <DialogTitle>{t("domains.purchase.title")}</DialogTitle>
           <DialogDescription>
-            {t("domains.url.body", { domain: domain?.domain ?? "" })}
+            {t("domains.purchase.body", { domain: domain?.domain ?? "" })}
           </DialogDescription>
         </DialogHeader>
 
-        <Field id="url-forwarding" label={t("domains.url.label")} hint={t("domains.url.hint")}>
-          <Input
-            id="url-forwarding"
-            autoFocus
-            inputMode="url"
-            spellCheck={false}
-            placeholder="https://example.com/landing"
-            value={value}
-            onChange={event => setValue(event.target.value)}
-            onKeyDown={event => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                void submit();
-              }
-            }}
-          />
-        </Field>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field id="purchase-price" label={t("domains.form.purchasePrice")}>
+            <CurrencyInput id="purchase-price" value={price} onValueChange={setPrice} currency={currency} />
+          </Field>
+          <Field id="purchase-date" label={t("domains.form.purchaseDate")}>
+            <DatePicker id="purchase-date" value={date} onChange={setDate} />
+          </Field>
+          <Field id="purchase-registrar" label={t("domains.form.registrar")}>
+            <Input
+              id="purchase-registrar"
+              autoComplete="off"
+              placeholder={t("domains.form.registrarPlaceholder")}
+              value={registrar}
+              onChange={event => setRegistrar(event.target.value)}
+            />
+          </Field>
+          <Field id="purchase-currency" label={t("domains.form.purchaseCurrency")}>
+            <Select value={currency} onValueChange={value => setCurrency(value as PurchaseCurrency)}>
+              <SelectTrigger id="purchase-currency">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PURCHASE_CURRENCIES.map(code => (
+                  <SelectItem key={code} value={code}>
+                    {code} · {t(`currency.${code}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+        </div>
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
@@ -184,9 +117,9 @@ export function UrlForwardingDialog({
   );
 }
 
-/* ------------------------------- nameservers ------------------------------- */
+/* --------------------------------- pricing --------------------------------- */
 
-export function NameserversDialog({
+export function PricingDialog({
   open,
   onOpenChange,
   domain,
@@ -195,20 +128,24 @@ export function NameserversDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   domain: DerivedDomain | null;
-  onSave: (nameservers: string[]) => Promise<void> | void;
+  onSave: (input: { askingPrice: number | null; minOffer: number | null }) => Promise<void> | void;
 }) {
   const { t } = useTranslation();
-  const [value, setValue] = useState<string[]>([]);
+  const [askingPrice, setAskingPrice] = useState<number | null>(null);
+  const [minOffer, setMinOffer] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
+  const currency = domain?.purchase_currency ?? "USD";
 
   useEffect(() => {
-    if (open) setValue(domain?.nameservers ?? []);
-  }, [open, domain?.id, domain?.nameservers]);
+    if (!open) return;
+    setAskingPrice(domain?.asking_price ?? null);
+    setMinOffer(domain?.min_offer ?? null);
+  }, [open, domain?.id, domain?.asking_price, domain?.min_offer]);
 
   async function submit() {
     try {
       setBusy(true);
-      await onSave(value.map(item => item.trim()).filter(Boolean));
+      await onSave({ askingPrice, minOffer });
       onOpenChange(false);
     } finally {
       setBusy(false);
@@ -219,16 +156,87 @@ export function NameserversDialog({
     <Dialog open={open} onOpenChange={busy ? undefined : onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{t("domains.ns.title")}</DialogTitle>
-          <DialogDescription>{t("domains.ns.body", { domain: domain?.domain ?? "" })}</DialogDescription>
+          <DialogTitle>{t("domains.pricing.title")}</DialogTitle>
+          <DialogDescription>
+            {t("domains.pricing.body", { domain: domain?.domain ?? "" })}
+          </DialogDescription>
         </DialogHeader>
 
-        <Field id="nameservers" label={t("domains.ns.label")} hint={t("domains.ns.hint")}>
-          <TagInput
-            id="nameservers"
-            value={value}
-            onChange={setValue}
-            placeholder={t("domains.ns.placeholder")}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field id="asking-price" label={t("domains.form.askingPrice")}>
+            <CurrencyInput
+              id="asking-price"
+              value={askingPrice}
+              onValueChange={setAskingPrice}
+              currency={currency}
+            />
+          </Field>
+          <Field id="min-offer" label={t("domains.form.minOffer")}>
+            <CurrencyInput id="min-offer" value={minOffer} onValueChange={setMinOffer} currency={currency} />
+          </Field>
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
+            {t("common.cancel")}
+          </Button>
+          <Button variant="primary" onClick={() => void submit()} loading={busy}>
+            {t("common.save")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ---------------------------------- notes ---------------------------------- */
+
+export function NotesDialog({
+  open,
+  onOpenChange,
+  domain,
+  onSave,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  domain: DerivedDomain | null;
+  onSave: (notes: string) => Promise<void> | void;
+}) {
+  const { t } = useTranslation();
+  const [notes, setNotes] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setNotes(domain?.notes ?? "");
+  }, [open, domain?.id, domain?.notes]);
+
+  async function submit() {
+    try {
+      setBusy(true);
+      await onSave(notes.trim());
+      onOpenChange(false);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={busy ? undefined : onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{t("domains.notes.title")}</DialogTitle>
+          <DialogDescription>{t("domains.notes.body", { domain: domain?.domain ?? "" })}</DialogDescription>
+        </DialogHeader>
+
+        <Field id="domain-notes" label={t("domains.form.notes")}>
+          <Textarea
+            id="domain-notes"
+            rows={6}
+            autoFocus
+            placeholder={t("domains.form.notesPlaceholder")}
+            value={notes}
+            onChange={event => setNotes(event.target.value)}
           />
         </Field>
 
