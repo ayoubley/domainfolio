@@ -400,7 +400,6 @@ export function DomainsPage() {
       <ImportDomainsDialog
         open={importOpen}
         onOpenChange={setImportOpen}
-        folders={folders ?? []}
         onRequestSingle={() => {
           setEditing(null);
           setCreateOpen(true);

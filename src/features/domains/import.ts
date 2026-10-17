@@ -70,7 +70,6 @@ export type ImportDefaults = {
   registrar: string;
   currency: PurchaseCurrency;
   autoRenew: boolean;
-  folderId: string | null;
 };
 
 export type ImportRow = {
@@ -118,6 +117,9 @@ function parseIsoDate(value: string): { ok: true; value: string | null } | { ok:
   const trimmed = value.trim();
   if (!trimmed) return { ok: true, value: null };
   if (ISO_DATE.test(trimmed)) return { ok: true, value: trimmed };
+
+  // A bare number is not a date: "80" has to be a row error, never 1980-01-01.
+  if (/^\d{1,4}$/.test(trimmed)) return { ok: false };
 
   // Tolerate d/m/y and m/d/y, and named months, via the platform parser.
   const parsed = new Date(trimmed);
@@ -203,20 +205,33 @@ const FIELD_ALIASES: Record<ImportField, string[]> = {
 const normalizeHeader = (header: string) => header.toLowerCase().replace(/[^a-z0-9\u0600-\u06FF]/g, "");
 
 /**
- * Best-effort header mapping: exact name, then alias, then substring. The user
- * can always correct it in the mapping table.
+ * Best-effort header mapping: exact name, then alias, then substring. Exact and
+ * alias matches are claimed first, across every field, so a loose substring
+ * match can never steal a column that another field names exactly (the old
+ * one-pass version mapped "Purchase Price" to purchase *date* before the price
+ * field could claim it). The user can always correct it in the mapping table.
  */
 export function autoMapColumns(headers: string[]): ColumnMapping {
   const normalized = headers.map(header => ({ header, key: normalizeHeader(header) }));
   const mapping: ColumnMapping = {};
+  const claimed = new Set<string>();
 
-  for (const field of IMPORT_FIELDS) {
-    const aliases = FIELD_ALIASES[field];
-    const exact = normalized.find(item => item.key === normalizeHeader(field));
-    const alias = normalized.find(item => aliases.includes(item.key));
-    const partial = normalized.find(item => item.key !== "" && aliases.some(a => item.key.includes(a)));
-    const match = exact ?? alias ?? partial;
-    if (match) mapping[field] = match.header;
+  for (const pass of ["strong", "loose"] as const) {
+    for (const field of IMPORT_FIELDS) {
+      if (mapping[field]) continue;
+      const aliases = FIELD_ALIASES[field];
+      // A column already spoken for is off the table for every later field.
+      const available = normalized.filter(item => !claimed.has(item.header));
+      const match =
+        pass === "strong"
+          ? (available.find(item => item.key === normalizeHeader(field)) ??
+            available.find(item => aliases.includes(item.key)))
+          : available.find(item => item.key !== "" && aliases.some(alias => item.key.includes(alias)));
+      if (match) {
+        mapping[field] = match.header;
+        claimed.add(match.header);
+      }
+    }
   }
 
   return mapping;
@@ -339,7 +354,7 @@ function applyDefaults(
 
   const candidate: Record<string, unknown> = {
     domain,
-    folder_id: defaults.folderId,
+    folder_id: null,
     registered_date: date("registered_date", purchaseDate),
     purchase_date: purchaseDate,
     expiry_date: expiryDate,
@@ -352,8 +367,8 @@ function applyDefaults(
     asking_price: money("asking_price", null),
     min_offer: money("min_offer", null),
     auto_renew: bool("auto_renew", defaults.autoRenew),
-    privacy: bool("privacy", true),
-    locked: bool("locked", true),
+    privacy: bool("privacy", false),
+    locked: bool("locked", false),
     nameservers: parseList(pick("nameservers")),
     url_forwarding: pick("url_forwarding") || null,
     acquisition_source: pick("acquisition_source") || null,

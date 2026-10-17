@@ -1,12 +1,11 @@
 import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowUpRight } from "lucide-react";
 import type { ReactNode } from "react";
 import type { TFunction } from "i18next";
 import { RiskBadge, StatusBadge } from "@/components/shared/StatusBadge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AutoRenewSwitch, FolderCell, FlagToggle, LifecycleBadge, NameserversCell, SourceBadge } from "@/features/domains/components/DomainCells";
 import type { DerivedDomain } from "@/lib/domain-rules";
-import { formatDate, money, percent, relativeDays, signedMoney } from "@/lib/format";
+import { formatDate, money, relativeDays } from "@/lib/format";
 import type { DomainUpdate, FolderRow } from "@/types/database";
 import { cn } from "@/lib/utils";
 
@@ -331,55 +330,6 @@ export function createDomainColumns({
       cell: ({ row }) => (
         <span className="tabular text-muted-foreground">
           {money(row.original.sale_price, { currency: row.original.purchase_currency })}
-        </span>
-      ),
-    },
-    {
-      id: "netProfit",
-      accessorFn: row => row.netProfit ?? 0,
-      header: t("domains.columns.netProfit"),
-      size: 120,
-      cell: ({ row }) => {
-        const { netProfit, purchase_currency } = row.original;
-        if (netProfit === null) return <span className="text-muted-foreground">—</span>;
-        return (
-          <span className={cn("tabular font-medium", netProfit >= 0 ? "text-positive" : "text-negative")}>
-            {signedMoney(netProfit, purchase_currency)}
-          </span>
-        );
-      },
-    },
-    {
-      id: "roi",
-      accessorFn: row => row.roi ?? 0,
-      header: t("domains.columns.roi"),
-      size: 90,
-      cell: ({ row }) => {
-        const { roi } = row.original;
-        if (roi === null) return <span className="text-muted-foreground">—</span>;
-        return (
-          <span className={cn("tabular font-medium", roi >= 0 ? "text-positive" : "text-negative")}>
-            {roi > 0 ? <ArrowUpRight className="me-0.5 inline size-3" /> : null}
-            {percent(roi)}
-          </span>
-        );
-      },
-    },
-    {
-      id: "niche",
-      accessorFn: row => row.niche ?? "—",
-      header: t("domains.columns.niche"),
-      size: 130,
-      cell: ({ row }) => <span className="text-muted-foreground">{row.original.niche ?? "—"}</span>,
-    },
-    {
-      id: "tags",
-      accessorFn: row => (row.tags ?? []).join(", "),
-      header: t("domains.columns.tags"),
-      size: 160,
-      cell: ({ row }) => (
-        <span className="block max-w-[160px] truncate text-muted-foreground">
-          {(row.original.tags ?? []).join(", ") || "—"}
         </span>
       ),
     },

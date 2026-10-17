@@ -20,7 +20,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { folderColorClass } from "@/features/domains/folder-colors";
 import { useBulkCreateDomains, useDomainsQuery } from "@/features/domains/queries";
 import {
   IMPORT_FIELDS,
@@ -38,9 +37,8 @@ import {
 import { PURCHASE_CURRENCIES } from "@/lib/constants";
 import { toIsoDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import type { FolderRow, PurchaseCurrency } from "@/types/database";
+import type { PurchaseCurrency } from "@/types/database";
 
-const NO_FOLDER = "__none__";
 const NOT_MAPPED = "__unmapped__";
 
 /**
@@ -58,14 +56,12 @@ function emptyDefaults(): ImportDefaults {
     registrar: "",
     currency: "USD",
     autoRenew: true,
-    folderId: null,
   };
 }
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  folders: FolderRow[];
   /** Offered as a secondary path for a rich single-domain record. */
   onRequestSingle?: () => void;
   onImported?: (count: number) => void;
@@ -76,7 +72,7 @@ type Props = {
  * Everything funnels through `resolveImportRows`, so both tabs share the same
  * Zod validation, duplicate detection and summary.
  */
-export function ImportDomainsDialog({ open, onOpenChange, folders, onRequestSingle, onImported }: Props) {
+export function ImportDomainsDialog({ open, onOpenChange, onRequestSingle, onImported }: Props) {
   const { t } = useTranslation();
   const bulkCreate = useBulkCreateDomains();
   const { data: allDomains } = useDomainsQuery(true);
@@ -406,50 +402,22 @@ export function ImportDomainsDialog({ open, onOpenChange, folders, onRequestSing
             </Field>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field id="import-folder" label={t("domains.form.folder")}>
-              <Select
-                value={defaults.folderId ?? NO_FOLDER}
-                onValueChange={value =>
-                  setDefaults(current => ({ ...current, folderId: value === NO_FOLDER ? null : value }))
-                }
-              >
-                <SelectTrigger id="import-folder">
-                  <SelectValue placeholder={t("domains.folder.none")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NO_FOLDER}>{t("domains.folder.none")}</SelectItem>
-                  {folders.map(folder => (
-                    <SelectItem key={folder.id} value={folder.id}>
-                      <span className="flex items-center gap-2">
-                        <span className={cn("size-2 rounded-full", folderColorClass(folder.color).dot)} aria-hidden />
-                        {folder.name}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-
-            <div className="flex items-end">
-              <label
-                htmlFor="import-auto-renew"
-                className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg border border-border px-3 py-2"
-              >
-                <span className="space-y-0.5">
-                  <span className="block text-2sm font-medium">{t("domains.form.autoRenew")}</span>
-                  <span className="block text-2xs text-muted-foreground">{t("domains.import.autoRenewHint")}</span>
-                </span>
-                <Checkbox
-                  id="import-auto-renew"
-                  checked={defaults.autoRenew}
-                  onCheckedChange={checked =>
-                    setDefaults(current => ({ ...current, autoRenew: checked === true }))
-                  }
-                />
-              </label>
-            </div>
-          </div>
+          <label
+            htmlFor="import-auto-renew"
+            className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-border px-3 py-2"
+          >
+            <span className="space-y-0.5">
+              <span className="block text-2sm font-medium">{t("domains.form.autoRenew")}</span>
+              <span className="block text-2xs text-muted-foreground">{t("domains.import.autoRenewHint")}</span>
+            </span>
+            <Checkbox
+              id="import-auto-renew"
+              checked={defaults.autoRenew}
+              onCheckedChange={checked =>
+                setDefaults(current => ({ ...current, autoRenew: checked === true }))
+              }
+            />
+          </label>
         </section>
 
         {/* --------------------------------- summary -------------------------------- */}
