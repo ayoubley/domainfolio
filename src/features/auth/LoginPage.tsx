@@ -1,5 +1,4 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Mail } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -11,7 +10,6 @@ import { useAuth } from "@/features/auth/AuthProvider";
 import { Field } from "@/components/shared/Field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 
 const schema = z.object({
   email: z.string().trim().min(1, "validation.required").email("validation.invalidEmail"),
@@ -20,12 +18,12 @@ const schema = z.object({
 
 type Values = z.infer<typeof schema>;
 
+/** Email + password sign-in only. */
 export function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const { signIn, signInWithMagicLink } = useAuth();
-  const [mode, setMode] = useState<"password" | "magic">("password");
+  const { signIn } = useAuth();
   const [busy, setBusy] = useState(false);
 
   const from = (location.state as { from?: string } | null)?.from ?? "/dashboard";
@@ -33,13 +31,6 @@ export function LoginPage() {
 
   async function onSubmit(values: Values) {
     setBusy(true);
-    if (mode === "magic") {
-      const result = await signInWithMagicLink(values.email);
-      setBusy(false);
-      if (result.ok) toast.success(t("auth.magicLinkSent"));
-      else toast.error(result.message);
-      return;
-    }
     const result = await signIn(values.email, values.password);
     setBusy(false);
     if (result.ok) {
@@ -67,49 +58,29 @@ export function LoginPage() {
           />
         </Field>
 
-        {mode === "password" ? (
-          <Field
+        <Field
+          id="password"
+          label={t("auth.password")}
+          error={passwordError ? t(passwordError) : undefined}
+          required
+          labelAccessory={
+            <Link to="/auth/forgot-password" className="text-2xs font-medium text-primary hover:underline">
+              {t("auth.forgotPassword")}
+            </Link>
+          }
+        >
+          <Input
             id="password"
-            label={t("auth.password")}
-            error={passwordError ? t(passwordError) : undefined}
-            required
-            labelAccessory={
-              <Link to="/auth/forgot-password" className="text-2xs font-medium text-primary hover:underline">
-                {t("auth.forgotPassword")}
-              </Link>
-            }
-          >
-            <Input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              placeholder={t("auth.passwordPlaceholder")}
-              invalid={Boolean(passwordError)}
-              {...form.register("password")}
-            />
-          </Field>
-        ) : null}
+            type="password"
+            autoComplete="current-password"
+            placeholder={t("auth.passwordPlaceholder")}
+            invalid={Boolean(passwordError)}
+            {...form.register("password")}
+          />
+        </Field>
 
         <Button type="submit" variant="primary" size="lg" className="w-full" loading={busy}>
-          {mode === "magic" ? t("auth.magicLink") : t("auth.signIn")}
-        </Button>
-
-        <div className="relative py-1 text-center">
-          <Separator />
-          <span className="absolute inset-x-0 -top-1 mx-auto w-fit bg-background px-2 text-2xs text-muted-foreground">
-            {t("auth.orContinueWith")}
-          </span>
-        </div>
-
-        <Button
-          type="button"
-          variant="outline"
-          size="lg"
-          className="w-full"
-          onClick={() => setMode(current => (current === "password" ? "magic" : "password"))}
-        >
-          {mode === "password" ? <Mail /> : null}
-          {mode === "password" ? t("auth.magicLink") : t("auth.signIn")}
+          {t("auth.signIn")}
         </Button>
       </form>
 
