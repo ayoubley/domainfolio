@@ -1,0 +1,325 @@
+import { useMemo } from "react";
+import {
+  BadgeDollarSign,
+  Banknote,
+  CalendarClock,
+  Coins,
+  FolderClock,
+  Globe,
+  Plus,
+  Repeat,
+  ShieldAlert,
+  Sparkles,
+  TrendingUp,
+} from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { Link, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { ErrorState } from "@/components/shared/ErrorState";
+import { KpiCard } from "@/components/shared/KpiCard";
+import { KpiSkeleton, LoadingState } from "@/components/shared/LoadingState";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { RiskBadge, StatusBadge } from "@/components/shared/StatusBadge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  ProfitChart,
+  RenewalForecastChart,
+  RiskMixChart,
+  StatusMixChart,
+} from "@/features/dashboard/PortfolioCharts";
+import { useActivityQuery, useDomainsQuery, useLoadDemoData } from "@/features/domains/queries";
+import { useAuth } from "@/features/auth/AuthProvider";
+import { useWorkspace } from "@/hooks/useWorkspace";
+import { deriveDomains, summarizePortfolio } from "@/lib/domain-rules";
+import { profitOverTime, renewalForecast } from "@/lib/analytics";
+import { formatDate, money, percent, relativeDays, signedMoney } from "@/lib/format";
+import { useLanguage } from "@/hooks/useLanguage";
+
+export function DashboardPage() {
+  const { t } = useTranslation();
+  const { language } = useLanguage();
+  const navigate = useNavigate();
+  const { profile, user } = useAuth();
+  const workspace = useWorkspace().current;
+
+  const { data: rows, isLoading, isError, refetch, isFetching } = useDomainsQuery();
+  const { data: activity, isLoading: activityLoading } = useActivityQuery(8);
+  const demoMutation = useLoadDemoData();
+
+  const derived = useMemo(() => deriveDomains(rows ?? []), [rows]);
+  const summary = useMemo(() => summarizePortfolio(derived), [derived]);
+  const currency = workspace?.default_currency ?? "USD";
+
+  const forecast = useMemo(() => renewalForecast(derived, language, 12), [derived, language]);
+  const profitSeries = useMemo(() => profitOverTime(derived, language), [derived, language]);
+
+  const name = profile?.full_name ?? (user?.user_metadata?.full_name as string | undefined);
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? t("dashboard.greetingMorning") : hour < 18 ? t("dashboard.greetingAfternoon") : t("dashboard.greetingEvening");
+
+  if (isError) {
+    return (
+      <div className="space-y-5">
+        <PageHeader title={t("dashboard.title")} />
+        <ErrorState onRetry={() => void refetch()} retrying={isFetching} />
+      </div>
+    );
+  }
+
+  if (!isLoading && derived.length === 0) {
+    return (
+      <div className="space-y-5">
+        <PageHeader title={t("dashboard.title")} description={t("dashboard.subtitle")} />
+        <div className="rounded-lg border border-dashed border-border-strong bg-card">
+          <EmptyState
+            icon={Globe}
+            title={t("domains.emptyTitle")}
+            description={t("domains.emptyBody")}
+            action={
+              <Button
+                variant="primary"
+                loading={demoMutation.isPending}
+                onClick={async () => {
+                  const count = await demoMutation.mutateAsync();
+                  toast.success(t("domains.demoLoaded", { count }));
+                }}
+              >
+                <Sparkles />
+                {t("domains.loadDemo")}
+              </Button>
+            }
+            secondaryAction={
+              <Button variant="outline" onClick={() => navigate("/domains")}>
+                <Plus />
+                {t("domains.addDomain")}
+              </Button>
+            }
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title={`${greeting}${name ? `, ${name.split(" ")[0]}` : ""}`}
+        description={t("dashboard.subtitle")}
+        actions={
+          <>
+            <Button variant="outline" onClick={() => navigate("/renewals")}>
+              <Repeat />
+              {t("dashboard.reviewRenewals")}
+            </Button>
+            <Button variant="primary" onClick={() => navigate("/domains")}>
+              <Plus />
+              {t("dashboard.addDomain")}
+            </Button>
+          </>
+        }
+      />
+
+      {isLoading ? (
+        <KpiSkeleton count={8} />
+      ) : (
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <KpiCard
+            label={t("dashboard.kpi.portfolioValue")}
+            value={summary.estimatedPortfolioValue}
+            format="money"
+            currency={currency}
+            icon={Coins}
+            footer={
+              <p className="text-2xs text-muted-foreground">
+                {t("dashboard.kpi.listPrice")}: {money(summary.totalListPrice, { currency, compact: true })}
+              </p>
+            }
+          />
+          <KpiCard
+            label={t("dashboard.kpi.totalDomains")}
+            value={summary.totalDomains}
+            icon={Globe}
+            footer={
+              <p className="text-2xs text-muted-foreground">
+                {t("dashboard.kpi.purchaseCost")}: {money(summary.totalPurchaseCost, { currency, compact: true })}
+              </p>
+            }
+          />
+          <KpiCard
+            label={t("dashboard.kpi.netProfit")}
+            value={summary.netProfit}
+            format="money"
+            currency={currency}
+            tone={summary.netProfit >= 0 ? "positive" : "negative"}
+            icon={BadgeDollarSign}
+            hint={t("dashboard.kpiHint.netProfit")}
+          />
+          <KpiCard
+            label={t("dashboard.kpi.roi")}
+            value={summary.roi}
+            format="percent"
+            tone={(summary.roi ?? 0) >= 0 ? "positive" : "negative"}
+            icon={TrendingUp}
+            hint={t("dashboard.kpiHint.roi")}
+          />
+          <KpiCard
+            label={t("dashboard.kpi.expiringSoon")}
+            value={summary.expiring30.length}
+            tone={summary.expiring30.length > 0 ? "warning" : "neutral"}
+            icon={CalendarClock}
+            footer={
+              <p className="text-2xs text-muted-foreground">
+                {t("dashboard.expiring.subtitle")} · {money(summary.totalRenewalCost, { currency, compact: true })}
+              </p>
+            }
+          />
+          <KpiCard
+            label={t("dashboard.kpi.purchaseCost")}
+            value={summary.totalPurchaseCost}
+            format="money"
+            currency={currency}
+            icon={Banknote}
+          />
+          <KpiCard
+            label={t("dashboard.kpi.requiringAction")}
+            value={summary.requiringAction}
+            tone={summary.requiringAction > 0 ? "warning" : "neutral"}
+            icon={ShieldAlert}
+            hint={t("dashboard.kpiHint.requiringAction")}
+          />
+          <KpiCard
+            label={t("dashboard.kpi.sellRate")}
+            value={summary.sellRate}
+            format="percent"
+            icon={FolderClock}
+            hint={t("dashboard.kpiHint.sellRate")}
+            footer={
+              <p className="text-2xs text-muted-foreground">
+                {t("dashboard.kpi.soldDomains")}: {summary.soldDomains} · {t("dashboard.kpi.totalSales")}:{" "}
+                {money(summary.totalSales, { currency, compact: true })}
+              </p>
+            }
+          />
+        </div>
+      )}
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        {/* Expiring soon */}
+        <Card className="lg:col-span-2">
+          <CardHeader className="flex-row items-center justify-between gap-2 pb-2">
+            <div>
+              <CardTitle>{t("dashboard.expiring.title")}</CardTitle>
+              <p className="mt-0.5 text-2xs text-muted-foreground">{t("dashboard.expiring.subtitle")}</p>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/renewals")}>
+              {t("dashboard.viewAll")}
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <LoadingState rows={3} />
+            ) : summary.expiring90.length === 0 ? (
+              <EmptyState
+                compact
+                icon={CalendarClock}
+                title={t("dashboard.expiring.empty")}
+                description={t("dashboard.expiring.emptyHint")}
+              />
+            ) : (
+              <ul className="divide-y divide-border">
+                {summary.expiring90.slice(0, 6).map(domain => (
+                  <li key={domain.id} className="flex items-center gap-3 py-2.5">
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        to={`/domains?focus=${domain.id}`}
+                        className="block truncate text-2sm font-medium tabular text-foreground hover:text-primary"
+                      >
+                        {domain.domain}
+                      </Link>
+                      <p className="text-2xs text-muted-foreground">
+                        {domain.expiry_date ? t("domains.detail.expiresOn", { date: formatDate(domain.expiry_date) }) : "—"}
+                        {domain.renewal_cost !== null ? ` · ${money(domain.renewal_cost, { currency: domain.purchase_currency })}` : null}
+                      </p>
+                    </div>
+                    <RiskBadge risk={domain.expiryRisk} />
+                    <span
+                      className={
+                        domain.daysLeft !== null && domain.daysLeft <= 15
+                          ? "tabular text-2xs font-medium text-status-expiring"
+                          : "tabular text-2xs text-muted-foreground"
+                      }
+                    >
+                      {relativeDays(domain.daysLeft)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Activity */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle>{t("dashboard.activity.title")}</CardTitle>
+            <p className="text-2xs text-muted-foreground">{t("dashboard.activity.subtitle")}</p>
+          </CardHeader>
+          <CardContent>
+            {activityLoading ? (
+              <LoadingState rows={3} />
+            ) : !activity || activity.length === 0 ? (
+              <EmptyState
+                compact
+                icon={FolderClock}
+                title={t("dashboard.activity.empty")}
+                description={t("dashboard.activity.emptyHint")}
+              />
+            ) : (
+              <ol className="space-y-3">
+                {activity.map(entry => (
+                  <li key={entry.id} className="relative ps-4">
+                    <span className="absolute start-0 top-1.5 size-1.5 rounded-full bg-primary" aria-hidden />
+                    <p className="text-2xs text-foreground">{entry.summary}</p>
+                    <p className="text-2xs text-muted-foreground">
+                      {t(`activityAction.${entry.action}`)} · {formatDate(entry.created_at)}
+                    </p>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <RenewalForecastChart data={forecast} currency={currency} />
+        <ProfitChart data={profitSeries} currency={currency} />
+        <StatusMixChart records={derived} />
+        <RiskMixChart records={derived} />
+      </div>
+
+      {/* Portfolio mix summary strip */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {(["active", "listed", "sold", "expired"] as const).map(status => (
+          <button
+            key={status}
+            type="button"
+            onClick={() => navigate("/domains")}
+            className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2.5 text-start shadow-xs transition-colors hover:border-border-strong"
+          >
+            <StatusBadge status={status} />
+            <span className="tabular text-sm font-semibold text-foreground">{summary.countsByStatus[status]}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="rounded-lg border border-border bg-subtle/40 px-4 py-3 text-2xs text-muted-foreground">
+        {t("dashboard.kpi.totalSales")}: {money(summary.totalSales, { currency })} ·{" "}
+        {t("dashboard.kpi.dataQuality")}: {summary.dataQualityIssues} · {t("dashboard.kpi.roi")}: {percent(summary.roi)} ·{" "}
+        {signedMoney(summary.netProfit, currency)}
+      </div>
+    </div>
+  );
+}
