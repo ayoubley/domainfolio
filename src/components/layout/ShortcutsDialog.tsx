@@ -24,6 +24,7 @@ const GROUPS: { id: string; labelKey: string; items: Shortcut[] }[] = [
       { keys: [sequence("G", "O")], labelKey: "shortcuts.goDomains" },
       { keys: [sequence("G", "R")], labelKey: "shortcuts.goRenewals" },
       { keys: [sequence("G", "S")], labelKey: "shortcuts.goSales" },
+      { keys: [sequence("G", "E")], labelKey: "shortcuts.goExpired" },
       { keys: [sequence("G", ",")], labelKey: "shortcuts.goSettings" },
     ],
   },

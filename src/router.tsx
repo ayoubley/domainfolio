@@ -34,6 +34,9 @@ const RenewalsPage = lazy(() =>
   import("@/features/renewals/RenewalsPage").then(module => ({ default: module.RenewalsPage }))
 );
 const SalesPage = lazy(() => import("@/features/sales/SalesPage").then(module => ({ default: module.SalesPage })));
+const ExpiredPage = lazy(() =>
+  import("@/features/expired/ExpiredPage").then(module => ({ default: module.ExpiredPage }))
+);
 const AnalyticsPage = lazy(() =>
   import("@/features/analytics/AnalyticsPage").then(module => ({ default: module.AnalyticsPage }))
 );
@@ -71,6 +74,7 @@ export const router = createBrowserRouter([
       { path: "/domains", element: page(<DomainsPage />) },
       { path: "/renewals", element: page(<RenewalsPage />) },
       { path: "/sales", element: page(<SalesPage />) },
+      { path: "/expired", element: page(<ExpiredPage />) },
       { path: "/analytics", element: page(<AnalyticsPage />) },
       { path: "/archive", element: page(<ArchivePage />) },
       { path: "/activity", element: page(<ActivityPage />) },

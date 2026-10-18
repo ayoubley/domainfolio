@@ -40,7 +40,7 @@ import {
   useRenewDomain,
   useRestoreDomain,
 } from "@/features/domains/queries";
-import { deriveDomain, deriveDomains } from "@/lib/domain-rules";
+import { deriveDomain, deriveDomains, isOwned } from "@/lib/domain-rules";
 import type { DerivedDomain } from "@/lib/domain-rules";
 import { APP_EVENTS, onAppEvent } from "@/lib/events";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -93,8 +93,11 @@ export function DomainsPage() {
   const renewMutation = useRenewDomain();
 
   const derived = useMemo(() => deriveDomains(rows ?? []), [rows]);
-  const filtered = useMemo(() => applyFilters(derived, filters), [derived, filters]);
-  const facets = useMemo(() => facetValues(derived), [derived]);
+  // Sold and expired domains have their own pages, so the table shows what is
+  // still owned. The rows are only filtered out — never deleted.
+  const owned = useMemo(() => derived.filter(isOwned), [derived]);
+  const filtered = useMemo(() => applyFilters(owned, filters), [owned, filters]);
+  const facets = useMemo(() => facetValues(owned), [owned]);
 
   // A stored visibility map from an earlier version won't know the new columns,
   // so default the keys it's missing rather than hiding them.
@@ -399,12 +402,10 @@ export function DomainsPage() {
               notes: notes || null,
             },
           });
-          await archiveAndOpenArchive(
-            soldTarget,
-            "sold",
-            t("domains.sold.done", { domain: soldTarget.domain })
-          );
+          await runArchive(soldTarget, "sold", t("domains.sold.done", { domain: soldTarget.domain }));
           setSoldTarget(null);
+          // The sale is recorded on its own page.
+          navigate("/sales");
         }}
       />
 

@@ -9,7 +9,7 @@ import { Topbar, type Crumb } from "@/components/layout/Topbar";
 import { RouteErrorBoundary } from "@/components/shared/RouteErrorBoundary";
 import { ImportDomainsDialog } from "@/features/domains/components/ImportDomainsDialog";
 import { useDomainsQuery } from "@/features/domains/queries";
-import { deriveDomains, summarizePortfolio } from "@/lib/domain-rules";
+import { deriveDomains, isOwned, summarizePortfolio } from "@/lib/domain-rules";
 import { APP_EVENTS, emit } from "@/lib/events";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 
@@ -18,6 +18,7 @@ const CRUMB_LABELS: Record<string, string> = {
   "/domains": "nav.domains",
   "/renewals": "nav.renewals",
   "/sales": "nav.sales",
+  "/expired": "nav.expired",
   "/analytics": "nav.analytics",
   "/archive": "nav.archive",
   "/activity": "nav.activity",
@@ -94,6 +95,7 @@ export function AppShell() {
           o: "/domains",
           r: "/renewals",
           s: "/sales",
+          e: "/expired",
           ",": "/settings",
         };
         const target = map[event.key.toLowerCase()];
@@ -118,10 +120,12 @@ export function AppShell() {
 
   const counts = useMemo(
     () => ({
-      "/domains": summary.totalDomains || undefined,
+      // The badge matches the Domains list exactly: sold and expired live on
+      // their own pages now.
+      "/domains": derived.filter(isOwned).length || undefined,
       "/renewals": summary.countsByRisk["0-30"] || undefined,
     }),
-    [summary]
+    [derived, summary]
   );
 
   return (
@@ -129,15 +133,9 @@ export function AppShell() {
       <Sidebar
         collapsed={collapsed}
         onToggleCollapsed={() => setCollapsed(value => !value)}
-        onOpenShortcuts={() => setShortcutsOpen(true)}
         counts={counts}
       />
-      <MobileNav
-        open={mobileOpen}
-        onOpenChange={setMobileOpen}
-        onOpenShortcuts={() => setShortcutsOpen(true)}
-        counts={counts}
-      />
+      <MobileNav open={mobileOpen} onOpenChange={setMobileOpen} counts={counts} />
 
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar

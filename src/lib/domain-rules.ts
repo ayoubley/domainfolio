@@ -343,3 +343,22 @@ export function summarizePortfolio(records: DerivedDomain[]): PortfolioSummary {
 export function isArchived(record: Pick<DomainRow, "archived_at">) {
   return Boolean(record.archived_at);
 }
+
+/** A domain is sold once it carries a sale date or the stored "sold" status. */
+export function isSold(record: Pick<DerivedDomain, "effectiveStatus">) {
+  return record.effectiveStatus === "sold";
+}
+
+/** A domain is expired once its expiry date is behind today. */
+export function isExpired(record: Pick<DerivedDomain, "effectiveStatus">) {
+  return record.effectiveStatus === "expired";
+}
+
+/**
+ * What the Domains page owns: everything that is neither sold nor expired.
+ * Sold and expired rows are filtered out of the table, never deleted, and each
+ * one has its own page.
+ */
+export function isOwned(record: Pick<DerivedDomain, "effectiveStatus">) {
+  return !isSold(record) && !isExpired(record);
+}

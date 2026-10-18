@@ -83,22 +83,16 @@ export const en = {
   },
 
   nav: {
-    section: {
-      portfolio: "Portfolio",
-      operations: "Operations",
-      insights: "Insights",
-      workspace: "Workspace",
-    },
     dashboard: "Dashboard",
     domains: "Domains",
     renewals: "Renewals",
-    sales: "Sales & Profit",
+    sales: "Sales",
+    expired: "Expired",
     analytics: "Analytics",
     archive: "Archive",
     activity: "Activity",
     import: "Import & Export",
     settings: "Settings",
-    help: "Help & shortcuts",
   },
 
   theme: {
@@ -556,8 +550,17 @@ export const en = {
   },
 
   sales: {
-    title: "Sales & Profit",
-    subtitle: "Every sale, and what it actually earned.",
+    title: "Sold domains",
+    subtitle: "Every domain you have sold: what it cost, what it earned and when.",
+    emptyTitle: "No sales yet",
+    emptyBody: "A domain lands here the moment you mark it as sold from its ⋯ menu.",
+  },
+
+  expired: {
+    title: "Expired domains",
+    subtitle: "Domains whose expiry date is behind today. Renew one and it returns to Domains.",
+    emptyTitle: "Nothing has expired",
+    emptyBody: "A domain shows up here the day its expiry date passes today's date.",
   },
 
   analytics: {
@@ -768,6 +771,7 @@ export const en = {
     goDomains: "Go to Domains",
     goRenewals: "Go to Renewals",
     goSales: "Go to Sales",
+    goExpired: "Go to Expired",
     goSettings: "Go to Settings",
   },
 

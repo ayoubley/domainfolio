@@ -90,22 +90,16 @@ export const ar: LooseDeep<TranslationResource> = {
   },
 
   nav: {
-    section: {
-      portfolio: "المحفظة",
-      operations: "العمليات",
-      insights: "التحليلات",
-      workspace: "مساحة العمل",
-    },
     dashboard: "لوحة التحكم",
     domains: "النطاقات",
-    renewals: "التجديدات",
-    sales: "المبيعات والأرباح",
+    renewals: "مركز التجديد",
+    sales: "النطاقات المباعة",
+    expired: "النطاقات المنتهية",
     analytics: "التحليلات",
     archive: "الأرشيف",
     activity: "السجل",
     import: "الاستيراد والتصدير",
     settings: "الإعدادات",
-    help: "المساعدة والاختصارات",
   },
 
   theme: {
@@ -605,13 +599,22 @@ export const ar: LooseDeep<TranslationResource> = {
   },
 
   renewals: {
-    title: "مركز التجديدات",
+    title: "مركز التجديد",
     subtitle: "خطّط واعتمد ما يُجدّد وما لا يُجدّد.",
   },
 
   sales: {
-    title: "المبيعات والأرباح",
-    subtitle: "كل عملية بيع، وما جنته فعلًا.",
+    title: "النطاقات المباعة",
+    subtitle: "كل نطاق بعته: تكلفته وربحه وتاريخ البيع.",
+    emptyTitle: "لا توجد مبيعات بعد",
+    emptyBody: "يظهر هنا أي نطاق تضع عليه علامة «مُباع» من قائمة النقاط الثلاث مباشرة.",
+  },
+
+  expired: {
+    title: "النطاقات المنتهية",
+    subtitle: "نطاقات مرّ تاريخ انتهائها. جدّد أيًا منها ليعود إلى صفحة النطاقات.",
+    emptyTitle: "لا يوجد نطاق منتهٍ",
+    emptyBody: "يظهر هنا أي نطاق يتجاوز تاريخ انتهائه تاريخ اليوم.",
   },
 
   analytics: {
@@ -823,8 +826,9 @@ export const ar: LooseDeep<TranslationResource> = {
     closeDialog: "إغلاق النافذة / اللوحة",
     goDashboard: "الذهاب إلى لوحة التحكم",
     goDomains: "الذهاب إلى النطاقات",
-    goRenewals: "الذهاب إلى التجديدات",
-    goSales: "الذهاب إلى المبيعات",
+    goRenewals: "الذهاب إلى مركز التجديد",
+    goSales: "الذهاب إلى النطاقات المباعة",
+    goExpired: "الذهاب إلى النطاقات المنتهية",
     goSettings: "الذهاب إلى الإعدادات",
   },
 
