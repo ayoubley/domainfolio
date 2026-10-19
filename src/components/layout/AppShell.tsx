@@ -143,7 +143,6 @@ export function AppShell() {
         <Topbar
           breadcrumbs={breadcrumbs}
           onOpenMenu={() => setMobileOpen(true)}
-          onOpenCommand={() => setCommandOpen(true)}
           onOpenShortcuts={() => setShortcutsOpen(true)}
           onNewDomain={() => setImportOpen(true)}
         />

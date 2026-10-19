@@ -1,4 +1,4 @@
-import { ChevronRight, Menu, Plus, Search } from "lucide-react";
+import { ChevronRight, Menu, Plus } from "lucide-react";
 import { Fragment } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -6,20 +6,17 @@ import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { UserMenu } from "@/components/layout/UserMenu";
 import { Button } from "@/components/ui/button";
-import { shortcut } from "@/lib/platform";
 
 export type Crumb = { label: string; to?: string };
 
 export function Topbar({
   breadcrumbs,
   onOpenMenu,
-  onOpenCommand,
   onOpenShortcuts,
   onNewDomain,
 }: {
   breadcrumbs: Crumb[];
   onOpenMenu: () => void;
-  onOpenCommand: () => void;
   onOpenShortcuts: () => void;
   onNewDomain: () => void;
 }) {
@@ -57,22 +54,6 @@ export function Topbar({
           })}
         </ol>
       </nav>
-
-      <button
-        type="button"
-        onClick={onOpenCommand}
-        className="hidden h-8 items-center gap-2 rounded-md border border-border bg-card px-2.5 text-xs text-muted-foreground shadow-xs transition-colors hover:border-border-strong hover:text-foreground lg:flex lg:w-64"
-      >
-        <Search className="size-3.5" />
-        <span className="flex-1 text-start">{t("domains.searchPlaceholder")}</span>
-        <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-sans text-2xs text-muted-foreground">
-          {shortcut("K")}
-        </kbd>
-      </button>
-
-      <Button variant="ghost" size="icon" className="lg:hidden" onClick={onOpenCommand} aria-label={t("common.search")}>
-        <Search />
-      </Button>
 
       <Button variant="primary" size="sm" onClick={onNewDomain} className="hidden sm:inline-flex">
         <Plus />

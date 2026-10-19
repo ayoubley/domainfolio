@@ -37,7 +37,7 @@ import {
 } from "@/features/domains/import";
 import { PURCHASE_CURRENCIES } from "@/lib/constants";
 import { toIsoDate } from "@/lib/format";
-import { playPartyPopper } from "@/lib/party-popper";
+import { playSuccessChime } from "@/lib/notification-sound";
 import { cn } from "@/lib/utils";
 import type { PurchaseCurrency } from "@/types/database";
 
@@ -207,7 +207,7 @@ export function ImportDomainsDialog({ open, onOpenChange, onImported }: Props) {
       toast.success(t("domains.import.done", { count: total }));
       // The celebration is part of the import, not of the page that opened it.
       setCelebrate(value => value + 1);
-      playPartyPopper();
+      playSuccessChime();
       onImported?.(total);
       setNamesText("");
       setSheet(null);
