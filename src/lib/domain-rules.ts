@@ -317,7 +317,9 @@ export function summarizePortfolio(records: DerivedDomain[]): PortfolioSummary {
     totalListPrice: sum(
       records.filter(record => record.effectiveStatus !== "sold").map(record => record.asking_price)
     ),
-    estimatedPortfolioValue: sum(records.map(record => record.estimated_value)),
+    estimatedPortfolioValue: sum(
+      records.filter(record => record.effectiveStatus !== "sold").map(record => record.estimated_value)
+    ),
     pricedDomains: records.filter(
       record => record.effectiveStatus !== "sold" && record.asking_price !== null
     ).length,

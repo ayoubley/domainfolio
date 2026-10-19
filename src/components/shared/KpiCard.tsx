@@ -1,5 +1,6 @@
 import { ArrowDownRight, ArrowUpRight, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { AnimatedNumber } from "@/components/shared/AnimatedNumber";
 import { SimpleTooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -19,6 +20,8 @@ export type KpiCardProps = {
   /** A short delta line, e.g. "+12% MoM". */
   delta?: { value: string; direction: "up" | "down" | "flat"; positiveIsGood?: boolean };
   footer?: ReactNode;
+  /** When set, the whole card becomes a link to that route. */
+  to?: string;
   className?: string;
 };
 
@@ -41,15 +44,11 @@ export function KpiCard({
   tone = "neutral",
   delta,
   footer,
+  to,
   className,
 }: KpiCardProps) {
-  const card = (
-    <div
-      className={cn(
-        "group relative flex flex-col gap-3 rounded-lg border border-border bg-card p-4 shadow-xs transition-shadow hover:shadow-sm",
-        className
-      )}
-    >
+  const body = (
+    <>
       <div className="flex items-center justify-between gap-2">
         <span className="truncate text-xs font-medium text-muted-foreground">{label}</span>
         {Icon ? (
@@ -85,7 +84,22 @@ export function KpiCard({
       </div>
 
       {footer ?? (hint ? <p className="text-2xs text-muted-foreground">{hint}</p> : null)}
-    </div>
+    </>
+  );
+
+  const cardClass = cn(
+    "group relative flex flex-col gap-3 rounded-lg border border-border bg-card p-4 shadow-xs transition-shadow hover:shadow-sm",
+    to &&
+      "cursor-pointer transition-colors hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+    className
+  );
+
+  const card = to ? (
+    <Link to={to} className={cardClass}>
+      {body}
+    </Link>
+  ) : (
+    <div className={cardClass}>{body}</div>
   );
 
   return hint ? (

@@ -36,7 +36,7 @@ import { useActivityQuery, useDomainsQuery, useLoadDemoData } from "@/features/d
 import { ImportDomainsDialog } from "@/features/domains/components/ImportDomainsDialog";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { useWorkspace } from "@/hooks/useWorkspace";
-import { deriveDomains, summarizePortfolio } from "@/lib/domain-rules";
+import { deriveDomains, isArchived, isSold, summarizePortfolio } from "@/lib/domain-rules";
 import { profitOverTime, renewalForecast } from "@/lib/analytics";
 import { formatDate, money, percent, relativeDays, signedMoney } from "@/lib/format";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -49,16 +49,27 @@ export function DashboardPage() {
   const workspace = useWorkspace().current;
   const [importOpen, setImportOpen] = useState(false);
 
-  const { data: rows, isLoading, isError, refetch, isFetching } = useDomainsQuery();
+  const { data: rows, isLoading, isError, refetch, isFetching } = useDomainsQuery(true);
   const { data: activity, isLoading: activityLoading } = useActivityQuery(8);
   const demoMutation = useLoadDemoData();
 
   const derived = useMemo(() => deriveDomains(rows ?? []), [rows]);
-  const summary = useMemo(() => summarizePortfolio(derived), [derived]);
+  /**
+   * Sold domains are archived the moment they are sold, so they only reach this
+   * page when archived rows are fetched too. The dashboard counts the portfolio
+   * **plus** everything that was sold; a domain that was archived without a sale
+   * has left the portfolio and affects no figure here.
+   */
+  const portfolio = useMemo(
+    () => derived.filter(record => !isArchived(record) || isSold(record)),
+    [derived]
+  );
+  const unsold = useMemo(() => portfolio.filter(record => !isSold(record)), [portfolio]);
+  const summary = useMemo(() => summarizePortfolio(portfolio), [portfolio]);
   const currency = workspace?.default_currency ?? "USD";
 
-  const forecast = useMemo(() => renewalForecast(derived, language, 12), [derived, language]);
-  const profitSeries = useMemo(() => profitOverTime(derived, language), [derived, language]);
+  const forecast = useMemo(() => renewalForecast(portfolio, language, 12), [portfolio, language]);
+  const profitSeries = useMemo(() => profitOverTime(portfolio, language), [portfolio, language]);
 
   const name = profile?.full_name ?? (user?.user_metadata?.full_name as string | undefined);
   const hour = new Date().getHours();
@@ -73,7 +84,7 @@ export function DashboardPage() {
     );
   }
 
-  if (!isLoading && derived.length === 0) {
+  if (!isLoading && portfolio.length === 0) {
     return (
       <div className="space-y-5">
         <PageHeader title={t("dashboard.title")} description={t("dashboard.subtitle")} />
@@ -134,6 +145,7 @@ export function DashboardPage() {
             label={t("dashboard.kpi.totalDomains")}
             value={summary.totalDomains}
             icon={Globe}
+            to="/domains"
             footer={
               <p className="text-2xs text-muted-foreground">
                 {t("dashboard.kpi.activeDomains")}: {summary.activeDomains} · {t("dashboard.kpi.listedDomains")}:{" "}
@@ -147,6 +159,7 @@ export function DashboardPage() {
             format="money"
             currency={currency}
             icon={Coins}
+            to="/domains"
             footer={
               <p className="text-2xs text-muted-foreground">
                 {t("dashboard.kpi.listPrice")}: {money(summary.totalListPrice, { currency, compact: true })}
@@ -159,6 +172,7 @@ export function DashboardPage() {
             format="money"
             currency={currency}
             icon={Banknote}
+            to="/domains"
           />
           <KpiCard
             label={t("dashboard.kpi.totalSales")}
@@ -167,6 +181,7 @@ export function DashboardPage() {
             currency={currency}
             icon={HandCoins}
             tone={summary.totalSales > 0 ? "positive" : "neutral"}
+            to="/sales"
           />
           <KpiCard
             label={t("dashboard.kpi.netProfit")}
@@ -176,11 +191,13 @@ export function DashboardPage() {
             tone={summary.netProfit >= 0 ? "positive" : "negative"}
             icon={BadgeDollarSign}
             hint={t("dashboard.kpiHint.netProfit")}
+            to="/sales"
           />
           <KpiCard
             label={t("dashboard.kpi.soldDomains")}
             value={summary.soldDomains}
             icon={Tag}
+            to="/sales"
             footer={
               <p className="text-2xs text-muted-foreground">
                 {t("dashboard.kpi.sellRate")}: {percent(summary.sellRate)}
@@ -192,6 +209,7 @@ export function DashboardPage() {
             value={summary.expiring30.length}
             tone={summary.expiring30.length > 0 ? "warning" : "neutral"}
             icon={CalendarClock}
+            to="/renewals"
             footer={
               <p className="text-2xs text-muted-foreground">
                 {t("dashboard.expiring.subtitle")}
@@ -203,11 +221,13 @@ export function DashboardPage() {
             value={summary.expiredDomains}
             tone={summary.expiredDomains > 0 ? "negative" : "neutral"}
             icon={ShieldAlert}
+            to="/expired"
           />
           <KpiCard
             label={t("dashboard.kpi.renewedDomains")}
             value={summary.renewedDomains}
             icon={RotateCcw}
+            to="/renewals"
           />
           <KpiCard
             label={t("dashboard.kpi.documentedRenewalCost")}
@@ -216,6 +236,7 @@ export function DashboardPage() {
             currency={currency}
             icon={Receipt}
             hint={t("dashboard.kpiHint.renewalCost")}
+            to="/renewals"
           />
         </div>
       )}
@@ -311,8 +332,8 @@ export function DashboardPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <RenewalForecastChart data={forecast} currency={currency} />
         <ProfitChart data={profitSeries} currency={currency} />
-        <StatusMixChart records={derived} />
-        <RiskMixChart records={derived} />
+        <StatusMixChart records={portfolio} />
+        <RiskMixChart records={unsold} />
       </div>
 
       {/* Portfolio mix summary strip */}
