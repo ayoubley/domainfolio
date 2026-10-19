@@ -4,9 +4,14 @@ import type { BadgeProps } from "@/components/ui/badge";
 import type { ExpiryRisk, RecommendedAction } from "@/lib/domain-rules";
 import type { DomainStatus } from "@/types/database";
 
-const STATUS_VARIANT: Record<DomainStatus, BadgeProps["variant"]> = {
+/**
+ * The one place that decides how a domain status is coloured. Exported so the
+ * inline status picker in the table can tint its trigger to match the badge.
+ */
+export const STATUS_VARIANT: Record<DomainStatus, BadgeProps["variant"]> = {
   active: "active",
   listed: "listed",
+  hold: "neutral",
   sold: "sold",
   expired: "expired",
 };

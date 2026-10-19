@@ -1,9 +1,14 @@
 import { useTranslation } from "react-i18next";
-import { Badge } from "@/components/ui/badge";
+import { Badge, badgeVariants } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { STATUS_VARIANT } from "@/components/shared/StatusBadge";
 import type { LifecycleTone } from "@/lib/domain-rules";
-import type { DomainSource } from "@/types/database";
+import type { DomainSource, DomainStatus } from "@/types/database";
 import { cn } from "@/lib/utils";
+
+/** The four states the status column offers, in the order the owner listed them. */
+export const STATUS_OPTIONS = ["listed", "hold", "active", "expired"] as const satisfies readonly DomainStatus[];
 
 /** Registry lifecycle badge (Redemption / Expired / Grace / Hold). */
 const LIFECYCLE_CLASS: Record<LifecycleTone, string> = {
@@ -52,6 +57,46 @@ export function AutoRenewSwitch({
         disabled={disabled}
         aria-label={t("domains.form.autoRenew")}
       />
+    </span>
+  );
+}
+
+/**
+ * The status cell: the owner's four states, changeable in place. It wears the
+ * same colours as the status badge, and never shows a state the stored record
+ * contradicts.
+ */
+export function StatusSelect({
+  status,
+  onChange,
+  disabled,
+}: {
+  status: DomainStatus;
+  onChange: (status: DomainStatus) => void;
+  disabled?: boolean;
+}) {
+  const { t } = useTranslation();
+  return (
+    // Changing the status must never bubble to the row click.
+    <span className="inline-flex" onClick={event => event.stopPropagation()}>
+      <Select value={status} onValueChange={value => onChange(value as DomainStatus)} disabled={disabled}>
+        <SelectTrigger
+          aria-label={t("status.label")}
+          className={cn(
+            "h-6 w-auto gap-1 shadow-none",
+            badgeVariants({ variant: STATUS_VARIANT[status] })
+          )}
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {STATUS_OPTIONS.map(option => (
+            <SelectItem key={option} value={option}>
+              {t(`status.${option}`)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </span>
   );
 }

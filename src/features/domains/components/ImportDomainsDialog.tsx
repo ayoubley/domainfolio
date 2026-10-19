@@ -15,11 +15,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { RegistrarSelect } from "@/features/domains/components/RegistrarSelect";
 import { useBulkCreateDomains, useDomainsQuery } from "@/features/domains/queries";
 import {
   IMPORT_FIELDS,
@@ -374,12 +374,10 @@ export function ImportDomainsDialog({ open, onOpenChange, onImported }: Props) {
               />
             </Field>
             <Field id="import-registrar" label={t("domains.form.registrar")}>
-              <Input
+              <RegistrarSelect
                 id="import-registrar"
-                autoComplete="off"
-                placeholder={t("domains.form.registrarPlaceholder")}
                 value={defaults.registrar}
-                onChange={event => setDefaults(current => ({ ...current, registrar: event.target.value }))}
+                onChange={value => setDefaults(current => ({ ...current, registrar: value }))}
               />
             </Field>
             <Field id="import-currency" label={t("domains.form.purchaseCurrency")}>

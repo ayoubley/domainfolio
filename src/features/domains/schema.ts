@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DOMAIN_STATUSES } from "@/lib/constants";
 import { hasInvalidDateOrder, normalizeDomain } from "@/lib/domain-rules";
 import type { DomainRow } from "@/types/database";
 
@@ -37,7 +38,7 @@ export function createDomainFormSchema(mode: DomainFormMode) {
         z.enum(["active", "grace", "redemption", "hold", "expired"]),
         z.literal(""),
       ]),
-      status: z.enum(["active", "listed", "sold", "expired"]),
+      status: z.enum(DOMAIN_STATUSES),
       renewalDecision: z.enum(["auto_renew", "renew", "review", "dont_renew", "pending"]),
       listedOn: z.array(z.string()),
       askingPrice: z.number().nullable(),

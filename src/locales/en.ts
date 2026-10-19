@@ -54,6 +54,8 @@ export const en = {
     selectAll: "Select all",
     clearSelection: "Clear selection",
     showing: "Showing",
+    showAll: "Show all",
+    showPaged: "Show {{count}}",
     of: "of",
     selected: "selected",
     actions: "Actions",
@@ -525,12 +527,10 @@ export const en = {
       done: "{{domain}} was marked as sold and moved to the archive.",
     },
     actions: {
-      renew: "Renew…",
       purchaseDetails: "Purchase details…",
       pricing: "Pricing…",
       notes: "Notes…",
       markSold: "Mark as sold…",
-      markDropped: "Mark as dropped…",
       archive: "Archive…",
       openInBrowser: "Open in browser",
       delete: "Delete…",
@@ -679,8 +679,9 @@ export const en = {
   },
 
   status: {
-    active: "Active",
-    listed: "Listed",
+    active: "Not listed",
+    listed: "Listed for sale",
+    hold: "On hold",
     sold: "Sold",
     expired: "Expired",
     expiring: "Expiring",

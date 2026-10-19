@@ -7,7 +7,7 @@
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
-export type DomainStatus = "active" | "listed" | "sold" | "expired";
+export type DomainStatus = "active" | "listed" | "hold" | "sold" | "expired";
 export type DomainSource = "manual" | "imported";
 /** Registrar/registry lifecycle state, stored because there is no live sync. */
 export type RegistryStatus = "active" | "grace" | "redemption" | "hold" | "expired";

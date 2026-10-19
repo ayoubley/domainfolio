@@ -154,15 +154,18 @@ export function deriveDomain(record: DomainRow, now: Date = new Date()): Derived
   const daysLeft = calculateDaysLeft(record.expiry_date, now);
   const expiryRisk = getExpiryRisk(daysLeft);
 
-  // Precedence: a sale wins, then expiry, then a listing, otherwise active.
+  // Precedence: a sale wins, then expiry (by date or by an explicit expiry
+  // status), then a pause, then a listing, otherwise plain owned.
   const effectiveStatus: DomainStatus =
     record.sold_date || record.status === "sold"
       ? "sold"
-      : expiryRisk === "expired"
+      : expiryRisk === "expired" || record.status === "expired"
         ? "expired"
-        : record.status === "listed" || (record.listed_on?.length ?? 0) > 0
-          ? "listed"
-          : "active";
+        : record.status === "hold"
+          ? "hold"
+          : record.status === "listed" || (record.listed_on?.length ?? 0) > 0
+            ? "listed"
+            : "active";
 
   const proceeds = netProceeds ?? salePrice;
 
@@ -293,7 +296,7 @@ export function summarizePortfolio(records: DerivedDomain[]): PortfolioSummary {
       acc[record.effectiveStatus] += 1;
       return acc;
     },
-    { active: 0, listed: 0, sold: 0, expired: 0 }
+    { active: 0, listed: 0, hold: 0, sold: 0, expired: 0 }
   );
 
   const countsByRisk = records.reduce<Record<ExpiryRisk, number>>(

@@ -1,11 +1,9 @@
 import {
   Archive,
   BadgeDollarSign,
-  CircleSlash,
   ExternalLink,
   FileText,
   MoreHorizontal,
-  RotateCcw,
   StickyNote,
   Tag,
   Trash2,
@@ -22,20 +20,18 @@ import {
 import type { DerivedDomain } from "@/lib/domain-rules";
 
 export type RowActionHandlers = {
-  onRenew: () => void;
   onPurchaseDetails: () => void;
   onPricing: () => void;
   onNotes: () => void;
   onMarkSold: () => void;
-  onMarkDropped: () => void;
   onArchive: () => void;
   onDelete: () => void;
 };
 
 /**
- * The ⋯ menu that sits in front of each domain name. Nine actions, in the
- * order requested: the editable records first, the two "mark as" shortcuts and
- * archive, then the link out and the destructive delete last.
+ * The ⋯ menu that sits in front of each domain name. Seven actions, in the
+ * order requested: the editable records first, then the two lifecycle
+ * shortcuts, then the link out and the destructive delete last.
  */
 export function RowActionsMenu({
   domain,
@@ -59,10 +55,6 @@ export function RowActionsMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-56">
-        <DropdownMenuItem onSelect={() => handlers.onRenew()}>
-          <RotateCcw />
-          {t("domains.actions.renew")}
-        </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => handlers.onPurchaseDetails()}>
           <FileText />
           {t("domains.actions.purchaseDetails")}
@@ -81,10 +73,6 @@ export function RowActionsMenu({
         <DropdownMenuItem onSelect={() => handlers.onMarkSold()}>
           <BadgeDollarSign />
           {t("domains.actions.markSold")}
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => handlers.onMarkDropped()}>
-          <CircleSlash />
-          {t("domains.actions.markDropped")}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => handlers.onArchive()}>
           <Archive />

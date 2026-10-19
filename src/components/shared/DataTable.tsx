@@ -62,14 +62,18 @@ export function DataTable<TData>({
   const isMobile = useIsMobile();
   const [sorting, setSorting] = useState<SortingState>(initialSorting);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: initialPageSize });
+  // "Show all" puts the whole result set on a single page, ignoring the pager.
+  const [showAll, setShowAll] = useState(false);
 
   const table = useReactTable({
     data,
     columns,
     getRowId,
-    state: { sorting, rowSelection, ...(columnVisibility ? { columnVisibility } : {}) },
+    state: { sorting, rowSelection, pagination, ...(columnVisibility ? { columnVisibility } : {}) },
     onSortingChange: setSorting,
     onRowSelectionChange: setRowSelection,
+    onPaginationChange: setPagination,
     ...(onColumnVisibilityChange
       ? {
           onColumnVisibilityChange: (
@@ -84,8 +88,26 @@ export function DataTable<TData>({
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: initialPageSize } },
   });
+
+  const totalRows = table.getFilteredRowModel().rows.length;
+
+  // Keep the page size in step with the mode: every row while "show all" is on
+  // (so newly added rows stay visible), the default page size otherwise.
+  useEffect(() => {
+    setPagination(current => {
+      const pageSize = showAll ? Math.max(totalRows, 1) : initialPageSize;
+      if (current.pageSize === pageSize) return current;
+      return { pageIndex: 0, pageSize };
+    });
+  }, [showAll, totalRows, initialPageSize]);
+
+  const toggleShowAll = () => setShowAll(current => !current);
+  const footerProps = {
+    showAll,
+    onToggleShowAll: toggleShowAll,
+    defaultPageSize: initialPageSize,
+  };
 
   useEffect(() => {
     if (!onSelectionChange) return;
@@ -118,7 +140,7 @@ export function DataTable<TData>({
             {renderMobileCard(row.original)}
           </div>
         ))}
-        <PaginationFooter table={table} />
+        <PaginationFooter table={table} {...footerProps} />
       </div>
     );
   }
@@ -193,7 +215,11 @@ export function DataTable<TData>({
           </TableBody>
         </Table>
       </div>
-      <PaginationFooter table={table} labels={{ showing: t("common.showing"), of: t("common.of"), page: t("common.page") }} />
+      <PaginationFooter
+        table={table}
+        labels={{ showing: t("common.showing"), of: t("common.of"), page: t("common.page") }}
+        {...footerProps}
+      />
     </div>
   );
 }
@@ -201,13 +227,22 @@ export function DataTable<TData>({
 function PaginationFooter<TData>({
   table,
   labels,
+  showAll,
+  onToggleShowAll,
+  defaultPageSize,
 }: {
   table: import("@tanstack/react-table").Table<TData>;
   labels?: { showing: string; of: string; page: string };
+  /** When true the whole result set is on one page. */
+  showAll?: boolean;
+  onToggleShowAll?: () => void;
+  /** The page size to restore when "show all" is switched off. */
+  defaultPageSize?: number;
 }) {
   const { t } = useTranslation();
   const total = table.getFilteredRowModel().rows.length;
-  if (total <= table.getState().pagination.pageSize && table.getPageCount() <= 1) return null;
+  // While "show all" is on the footer stays visible, so the pager can come back.
+  if (!showAll && total <= table.getState().pagination.pageSize && table.getPageCount() <= 1) return null;
 
   const pageIndex = table.getState().pagination.pageIndex;
   const pageSize = table.getState().pagination.pageSize;
@@ -234,6 +269,17 @@ function PaginationFooter<TData>({
           <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
             {t("common.next")}
           </Button>
+          {onToggleShowAll ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onToggleShowAll}
+              aria-pressed={Boolean(showAll)}
+              className="ms-1"
+            >
+              {showAll ? t("common.showPaged", { count: defaultPageSize }) : t("common.showAll")}
+            </Button>
+          ) : null}
         </div>
       </div>
     </div>

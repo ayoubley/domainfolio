@@ -21,7 +21,6 @@ import {
   NotesDialog,
   PricingDialog,
   PurchaseDetailsDialog,
-  RenewDomainDialog,
 } from "@/features/domains/components/DomainQuickDialogs";
 import { RowActionsMenu } from "@/features/domains/components/RowActionsMenu";
 import { DomainsToolbar, type DomainView } from "@/features/domains/components/DomainsToolbar";
@@ -37,7 +36,6 @@ import {
   useFoldersQuery,
   useLoadDemoData,
   useQuickUpdateDomain,
-  useRenewDomain,
   useRestoreDomain,
 } from "@/features/domains/queries";
 import { deriveDomain, deriveDomains, isOwned, ownedPositions } from "@/lib/domain-rules";
@@ -73,7 +71,6 @@ export function DomainsPage() {
   const [confettiFire, setConfettiFire] = useState(0);
 
   // Row-action dialogs
-  const [renewTarget, setRenewTarget] = useState<DerivedDomain | null>(null);
   const [purchaseTarget, setPurchaseTarget] = useState<DerivedDomain | null>(null);
   const [pricingTarget, setPricingTarget] = useState<DerivedDomain | null>(null);
   const [notesTarget, setNotesTarget] = useState<DerivedDomain | null>(null);
@@ -94,7 +91,6 @@ export function DomainsPage() {
   const archiveMutation = useArchiveDomain(filters.includeArchived);
   const restoreMutation = useRestoreDomain();
   const deleteMutation = useDeleteDomain();
-  const renewMutation = useRenewDomain();
 
   const derived = useMemo(() => deriveDomains(rows ?? []), [rows]);
   // Sold and expired domains have their own pages, so the table shows what is
@@ -161,12 +157,10 @@ export function DomainsPage() {
       <RowActionsMenu
         domain={domain}
         handlers={{
-          onRenew: () => setRenewTarget(domain),
           onPurchaseDetails: () => setPurchaseTarget(domain),
           onPricing: () => setPricingTarget(domain),
           onNotes: () => setNotesTarget(domain),
           onMarkSold: () => setSoldTarget(domain),
-          onMarkDropped: () => void archiveAndOpenArchive(domain, "dropped"),
           onArchive: () => {
             setArchiveReason("");
             setArchiveTarget(domain);
@@ -472,24 +466,6 @@ export function DomainsPage() {
             values: { notes: notes || null },
           });
           toast.success(t("domains.detail.updated", { domain: notesTarget.domain }));
-        }}
-      />
-
-      <RenewDomainDialog
-        open={Boolean(renewTarget)}
-        onOpenChange={open => {
-          if (!open) setRenewTarget(null);
-        }}
-        domain={renewTarget}
-        currency={renewTarget?.purchase_currency ?? workspace?.default_currency ?? "USD"}
-        onConfirm={async ({ renewalCost, note }) => {
-          if (!renewTarget) return;
-          const updated = await renewMutation.mutateAsync({
-            domainId: renewTarget.id,
-            renewalCost,
-            note,
-          });
-          toast.success(t("domains.detail.renewed", { domain: updated.domain, date: updated.expiry_date ?? "" }));
         }}
       />
 

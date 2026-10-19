@@ -3,7 +3,12 @@ import type { ReactNode } from "react";
 import type { TFunction } from "i18next";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { AutoRenewSwitch, LifecycleBadge, SourceBadge } from "@/features/domains/components/DomainCells";
+import {
+  AutoRenewSwitch,
+  LifecycleBadge,
+  SourceBadge,
+  StatusSelect,
+} from "@/features/domains/components/DomainCells";
 import type { DerivedDomain } from "@/lib/domain-rules";
 import { formatDate, money } from "@/lib/format";
 import type { DomainUpdate } from "@/types/database";
@@ -23,8 +28,8 @@ export type ColumnContext = {
 
 /**
  * The domains table: the row number, the select checkboxes, then domain (name,
- * its ⋯ menu and status badges), purchase price, purchase date, expiry date,
- * registrar and the auto-renew toggle.
+ * its ⋯ menu and status badges), status, purchase price, purchase date, expiry
+ * date, registrar and the auto-renew toggle.
  *
  * Declared as object literals (not `createColumnHelper`) so the whole array is
  * precisely `ColumnDef<DerivedDomain, unknown>[]` without leaning on `any`.
@@ -106,6 +111,26 @@ export function createDomainColumns({
       },
     },
     {
+      id: "status",
+      accessorFn: row => row.effectiveStatus,
+      header: t("status.label"),
+      size: 130,
+      cell: ({ row }) => (
+        <StatusSelect
+          status={row.original.effectiveStatus}
+          onChange={value =>
+            onQuickUpdate(
+              row.original,
+              // "Not listed" also clears the marketplaces the domain was on:
+              // that is what the choice means, and the column must never show a
+              // state the stored record contradicts.
+              value === "active" ? { status: value, listed_on: null } : { status: value },
+            )
+          }
+        />
+      ),
+    },
+    {
       id: "purchasePrice",
       accessorFn: row => row.purchase_price ?? 0,
       header: t("domains.columns.purchasePrice"),
@@ -171,6 +196,7 @@ export const DEFAULT_VISIBLE_COLUMNS = [
   "index",
   "select",
   "domain",
+  "status",
   "purchasePrice",
   "purchaseDate",
   "expiryDate",

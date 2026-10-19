@@ -7,7 +7,7 @@ import type {
 
 /** Business enums — the single source of truth for values and defaults. */
 
-export const DOMAIN_STATUSES = ["active", "listed", "sold", "expired"] as const;
+export const DOMAIN_STATUSES = ["active", "listed", "hold", "sold", "expired"] as const;
 export const RENEWAL_DECISIONS = [
   "auto_renew",
   "renew",
