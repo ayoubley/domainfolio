@@ -37,6 +37,11 @@ export const IMPORT_FIELDS = [
   "estimated_value",
   "tags",
   "notes",
+  "listed_on",
+  "sale_platform",
+  "sold_date",
+  "sale_price",
+  "net_proceeds",
 ] as const;
 
 export type ImportField = (typeof IMPORT_FIELDS)[number];
@@ -220,6 +225,11 @@ const importRowSchema = z.object({
   estimated_value: z.number().min(0).nullable(),
   tags: z.array(z.string().max(60)),
   notes: z.string().max(4000).nullable(),
+  listed_on: z.array(z.string().max(120)).nullable(),
+  sale_platform: z.string().max(120).nullable(),
+  sold_date: z.string().regex(ISO_DATE).nullable(),
+  sale_price: z.number().min(0).nullable(),
+  net_proceeds: z.number().min(0).nullable(),
 });
 
 /* ------------------------------ column mapping ----------------------------- */
@@ -233,12 +243,12 @@ const FIELD_ALIASES: Record<ImportField, string[]> = {
   purchase_price: ["purchaseprice", "cost", "price", "buyprice", "paid", "costbasis"],
   purchase_currency: ["purchasecurrency", "currency", "ccy"],
   renewal_cost: ["renewalcost", "renewal", "renewalprice", "renewalfee", "renewfee"],
-  registrar: ["registrar", "registry", "provider", "registrarcompany"],
+  registrar: ["registrar", "registry", "provider", "registrarcompany", "platform"],
   status: ["status", "state"],
   renewal_decision: ["renewaldecision", "decision", "renewalplan"],
-  asking_price: ["askingprice", "binprice", "bin", "listprice", "list", "saleprice", "forsale"],
+  asking_price: ["askingprice", "binprice", "bin", "listprice", "list", "forsale"],
   min_offer: ["minoffer", "minimumoffer", "minimum", "floor", "floorprice"],
-  auto_renew: ["autorenew", "autorenewal", "renewautomatically"],
+  auto_renew: ["autorenew", "autorenewal", "renewautomatically", "renew"],
   privacy: ["privacy", "privacyprotection", "whoisguard", "idprotect"],
   locked: ["locked", "lock", "transferlock", "clienttransferprohibited"],
   nameservers: ["nameservers", "nameserver", "ns", "dns"],
@@ -248,6 +258,11 @@ const FIELD_ALIASES: Record<ImportField, string[]> = {
   estimated_value: ["estimatedvalue", "estimate", "valuation", "appraisal", "appraisedvalue"],
   tags: ["tags", "tag", "labels", "keywords"],
   notes: ["notes", "note", "comment", "comments", "description", "remarks"],
+  listed_on: ["listedon", "forslaeon", "forsaleon", "marketplace", "marketplaces", "listedons", "listedonsites"],
+  sale_platform: ["saleplatform", "saleplace", "soldplace", "marketplacesold"],
+  sold_date: ["solddate", "datesold", "saledate", "saledateon"],
+  sale_price: ["saleprice", "pricesale", "soldprice", "finalprice", "soldamount"],
+  net_proceeds: ["netproceeds", "netprofit", "proceeds", "netsale", "netamount"],
 };
 
 const normalizeHeader = (header: string) => header.toLowerCase().replace(/[^a-z0-9\u0600-\u06FF]/g, "");
@@ -385,16 +400,25 @@ function applyDefaults(
     errors.push("validation.dateOrder:expiry_date");
   }
 
+  // A sale is its date, its price or the net received. The database accepts a
+  // sold domain as soon as it has a sale date or a sale price, so a row that
+  // carries either one is stored as sold — nothing is inferred beyond that.
+  const soldDate = date("sold_date", null);
+  const salePrice = money("sale_price", null);
+  const netProceeds = money("net_proceeds", null);
+  const isSold = soldDate !== null || salePrice !== null;
+  if (!isSold && netProceeds !== null) errors.push("validation.saleIncomplete:sold_date");
+
   // Enums
   const statusText = pick("status").toLowerCase();
-  const status = (DOMAIN_STATUSES as readonly string[]).includes(statusText)
+  const parsedStatus = (DOMAIN_STATUSES as readonly string[]).includes(statusText)
     ? (statusText as (typeof DOMAIN_STATUSES)[number])
     : "active";
+  const status = isSold ? "sold" : parsedStatus;
 
-  // A sale carries a date and a price and is recorded by "Mark as Sold" in the
-  // ⋯ menu. A bare `sold` in a spreadsheet breaks the database's own rule, so
-  // it reads as a row error here rather than a dead end for every other row.
-  if (status === "sold") errors.push("validation.soldNotImportable:status");
+  // A spreadsheet may say "sold" without carrying the sale itself; that row
+  // cannot be stored, so it reads as a row error instead of failing the batch.
+  if (parsedStatus === "sold" && !isSold) errors.push("validation.saleIncomplete:status");
 
   const decisionText = pick("renewal_decision").toLowerCase();
   const renewalDecision = (RENEWAL_DECISIONS as readonly string[]).includes(decisionText)
@@ -410,6 +434,7 @@ function applyDefaults(
   };
 
   const registrar = pick("registrar") || defaults.registrar.trim();
+  const listedOn = parseList(pick("listed_on"));
 
   const candidate: Record<string, unknown> = {
     domain,
@@ -435,12 +460,12 @@ function applyDefaults(
     estimated_value: money("estimated_value", null),
     tags: parseList(pick("tags")),
     notes: pick("notes") || null,
-    listed_on: null,
-    sale_platform: null,
+    listed_on: listedOn.length > 0 ? listedOn : null,
+    sale_platform: pick("sale_platform") || null,
     sale_type: null,
-    sold_date: null,
-    sale_price: null,
-    net_proceeds: null,
+    sold_date: soldDate,
+    sale_price: salePrice,
+    net_proceeds: netProceeds,
     source: "imported" as const,
   };
 
@@ -503,15 +528,46 @@ export function importTemplateCsv(): string {
     "renewal_cost",
     "registrar",
     "status",
+    "auto_renew",
+    "renewal_decision",
+    "listed_on",
     "asking_price",
     "min_offer",
-    "auto_renew",
     "nameservers",
     "url_forwarding",
     "acquisition_source",
     "niche",
     "tags",
     "notes",
+    "sold_date",
+    "sale_price",
+    "sale_platform",
+    "net_proceeds",
   ];
-  return `${headers.join(",")}\nexample.com,2025-01-15,2026-01-15,950,USD,14,Namecheap,active,4500,3200,true,ns1.example.com,https://landing.example.com,Dropcatch,Brandable,premium|short,Looks strong\n`;
+  const example = [
+    "example.com",
+    "2025-01-15",
+    "2026-01-15",
+    "950",
+    "USD",
+    "14",
+    "Namecheap",
+    "active",
+    "true",
+    "auto_renew",
+    "Afternic",
+    "4500",
+    "3200",
+    "ns1.example.com",
+    "https://landing.example.com",
+    "Dropcatch",
+    "Brandable",
+    "premium|short",
+    "Looks strong",
+    "",
+    "",
+    "",
+    "",
+  ];
+  return `${headers.join(",")}\n${example.map(cell => (cell.includes(",") ? `"${cell}"` : cell)).join(",")}\n`;
 }
