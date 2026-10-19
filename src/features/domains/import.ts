@@ -102,19 +102,67 @@ export function parseDomainList(text: string): string[] {
     .filter(Boolean);
 }
 
+/**
+ * Arabic-Indic digits (٠-٩) and their Persian cousins (۰-۹) are the very same
+ * numbers typed on an Arabic keyboard — reading them is not guessing a value.
+ * The Arabic decimal separator (٫) is a decimal point, and its thousands
+ * separator (٬) is a thousands separator, exactly like "," and ".".
+ */
+function normalizeDigits(value: string): string {
+  return value
+    .replace(/[\u0660-\u0669\u06F0-\u06F9]/g, char => {
+      const code = char.charCodeAt(0);
+      return String(code - (code >= 0x06f0 ? 0x06f0 : 0x0660));
+    })
+    .replace(/\u066B/g, ".")
+    .replace(/\u066C/g, ",");
+}
+
 function parseMoney(value: string): { ok: true; value: number | null } | { ok: false } {
   if (value.trim() === "") return { ok: true, value: null };
-  const cleaned = value.replace(/[^0-9.]/g, "");
+  const text = normalizeDigits(value).replace(/[^0-9.,]/g, "");
   // A cell with no digits at all is a mistake (e.g. "N/A" in a price column),
-  // never a silent zero — the product rule forbids inventing amounts.
-  if (!/[0-9]/.test(cleaned)) return { ok: false };
-  const parsed = Number(cleaned);
+  // never a silent zero — the product rule forbids inventing amounts. Nor does a
+  // minus sign quietly become a plus: "-5" is unreadable, so it is a row error.
+  if (!/[0-9]/.test(text) || /[-−]/.test(value)) return { ok: false };
+  // Grouped ("1,234.56") or plain ("950,5") — anything else ("1.2.3") is a typo.
+  const shaped = [/^\d{1,3}([.,]\d{3})*([.,]\d{1,3})?$/, /^\d+([.,]\d{1,3})?$/].some(shape => shape.test(text));
+  if (!shaped) return { ok: false };
+
+  // Excel hands numbers over as "950.5". A text cell may use a comma for the
+  // decimals ("950,50") or for thousands ("1,500"), so separators are read
+  // rather than swallowed — swallowing "950,50" would make it 95050.
+  const digitsOnly = (part: string) => part.replace(/[.,]/g, "");
+  const lastComma = text.lastIndexOf(",");
+  const lastDot = text.lastIndexOf(".");
+  let normalized = digitsOnly(text);
+  if (lastComma !== -1 || lastDot !== -1) {
+    const groups = text.split(/[.,]/);
+    const head = groups[0] ?? "";
+    const tails = groups.slice(1);
+    // "1,500" / "1.500" / "1,234,567" group in threes; "950,50" and "0.125" do
+    // not. Mixed separators ("1,500.00") always put the decimal point last.
+    const thousands =
+      (lastComma === -1 || lastDot === -1) &&
+      tails.length > 0 &&
+      tails.every(group => group.length === 3) &&
+      head.length >= 1 &&
+      head.length <= 3 &&
+      !head.startsWith("0");
+    normalized = thousands
+      ? digitsOnly(text)
+      : `${digitsOnly(groups.slice(0, -1).join(""))}.${tails[tails.length - 1]}`;
+  }
+  // "1.2.3" is a typo, not a number: it becomes a row error like any other.
+  if ((normalized.match(/\./g) ?? []).length > 1) return { ok: false };
+
+  const parsed = Number(normalized);
   if (!Number.isFinite(parsed) || parsed < 0) return { ok: false };
   return { ok: true, value: Math.round(parsed * 100) / 100 };
 }
 
 function parseIsoDate(value: string): { ok: true; value: string | null } | { ok: false } {
-  const trimmed = value.trim();
+  const trimmed = normalizeDigits(value).trim();
   if (!trimmed) return { ok: true, value: null };
   if (ISO_DATE.test(trimmed)) return { ok: true, value: trimmed };
 
@@ -331,11 +379,22 @@ function applyDefaults(
   const purchaseDate = date("purchase_date", defaults.purchaseDate);
   const expiryDate = date("expiry_date", purchaseDate ? expiryAfterOneYear(purchaseDate) : null);
 
+  // The database refuses an expiry that is not after the purchase date. Caught
+  // here, one bad row becomes a row error instead of failing the whole batch.
+  if (purchaseDate && expiryDate && expiryDate <= purchaseDate) {
+    errors.push("validation.dateOrder:expiry_date");
+  }
+
   // Enums
   const statusText = pick("status").toLowerCase();
   const status = (DOMAIN_STATUSES as readonly string[]).includes(statusText)
     ? (statusText as (typeof DOMAIN_STATUSES)[number])
     : "active";
+
+  // A sale carries a date and a price and is recorded by "Mark as Sold" in the
+  // ⋯ menu. A bare `sold` in a spreadsheet breaks the database's own rule, so
+  // it reads as a row error here rather than a dead end for every other row.
+  if (status === "sold") errors.push("validation.soldNotImportable:status");
 
   const decisionText = pick("renewal_decision").toLowerCase();
   const renewalDecision = (RENEWAL_DECISIONS as readonly string[]).includes(decisionText)

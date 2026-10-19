@@ -876,6 +876,7 @@ export const ar: LooseDeep<TranslationResource> = {
     positive: "أدخل رقمًا موجبًا.",
     dateInvalid: "أدخل تاريخًا صحيحًا.",
     dateOrder: "يجب أن يكون الانتهاء بعد تاريخ الشراء.",
+    soldNotImportable: "النطاقات المباعة تُعلَّم من قائمة ⋯ بجانب النطاق — البيع يحتاج تاريخه وثمنه.",
     domainRequired: "أدخل اسم نطاق.",
     domainInvalid: "لا يبدو هذا نطاقًا صحيحًا.",
     tooLong: "هذا طويل قليلًا.",

@@ -820,6 +820,7 @@ export const en = {
     positive: "Enter a positive number.",
     dateInvalid: "Enter a valid date.",
     dateOrder: "Expiry must be after the purchase date.",
+    soldNotImportable: "Mark sold domains from the row's ⋯ menu — a sale needs its date and price.",
     domainRequired: "Enter a domain name.",
     domainInvalid: "That doesn't look like a valid domain.",
     tooLong: "That's a little too long.",
