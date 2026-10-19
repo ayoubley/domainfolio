@@ -20,8 +20,9 @@ export type NavItem = {
 };
 
 /**
- * The sidebar: the owner's five destinations, stacked in this order and
- * nothing else.
+ * The sidebar: the owner's destinations, stacked in this order and nothing
+ * else. Everything a domain is deleted from the list goes to the archive, so it
+ * sits right under the expired ones.
  */
 export const NAV_ITEMS: NavItem[] = [
   { to: "/dashboard", labelKey: "nav.dashboard", icon: LayoutDashboard, shortcut: "d" },
@@ -29,6 +30,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: "/renewals", labelKey: "nav.renewals", icon: Repeat, shortcut: "r" },
   { to: "/sales", labelKey: "nav.sales", icon: TrendingUp, shortcut: "s" },
   { to: "/expired", labelKey: "nav.expired", icon: CalendarX2, shortcut: "e" },
+  { to: "/archive", labelKey: "nav.archive", icon: FolderArchive },
 ];
 
 /**
@@ -38,7 +40,6 @@ export const NAV_ITEMS: NavItem[] = [
 export const SECONDARY_NAV_ITEMS: NavItem[] = [
   { to: "/analytics", labelKey: "nav.analytics", icon: BarChart3 },
   { to: "/activity", labelKey: "nav.activity", icon: Clock },
-  { to: "/archive", labelKey: "nav.archive", icon: FolderArchive },
   { to: "/import", labelKey: "nav.import", icon: Import },
   { to: "/settings", labelKey: "nav.settings", icon: Settings },
 ];

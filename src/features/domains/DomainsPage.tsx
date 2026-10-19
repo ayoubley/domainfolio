@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { VisibilityState } from "@tanstack/react-table";
-import { Archive, ArchiveRestore, Download, FolderOpen, Sparkles, Tag } from "lucide-react";
+import { ArchiveRestore, Download, FolderOpen, Sparkles, Tag, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -216,7 +216,7 @@ export function DomainsPage() {
   async function handleBulkArchive() {
     const ids = selected.map(row => row.id);
     await bulkArchive.mutateAsync({ domainIds: ids });
-    toast(t("toast.archived"), {
+    toast(t("toast.movedToArchive", { count: ids.length }), {
       action: {
         label: t("common.undo"),
         onClick: () => {
@@ -273,8 +273,8 @@ export function DomainsPage() {
               </Button>
             ) : (
               <Button size="sm" variant="outline" onClick={handleBulkArchive}>
-                <Archive />
-                {t("domains.bulk.archive")}
+                <Trash2 />
+                {t("domains.bulk.delete")}
               </Button>
             )}
             <Button size="sm" variant="outline" onClick={() => void exportDomains(selected, "xlsx")}>

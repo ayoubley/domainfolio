@@ -345,7 +345,7 @@ export const en = {
     bulk: {
       title_one: "{{count}} domain selected",
       title_other: "{{count}} domains selected",
-      archive: "Archive",
+      delete: "Delete domains",
       restore: "Restore",
       export: "Export",
       clear: "Clear",
@@ -835,6 +835,8 @@ export const en = {
     updated: "Domain updated.",
     archived: "Domain archived.",
     archivedWithUndo: "Domain archived.",
+    movedToArchive_one: "Domain moved to the archive.",
+    movedToArchive_other: "{{count}} domains moved to the archive.",
     restored: "Domain restored.",
     renewed: "Domain renewed.",
     error: "Something went wrong. Please try again.",
