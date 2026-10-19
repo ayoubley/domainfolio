@@ -1,4 +1,4 @@
-import { forwardRef, useState } from "react";
+import { forwardRef, useEffect, useState } from "react";
 import type { InputHTMLAttributes } from "react";
 import { moneyNumber } from "@/lib/domain-rules";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,12 @@ export type CurrencyInputProps = Omit<
 export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
   ({ value, onValueChange, currency, className, invalid, ...props }, ref) => {
     const [text, setText] = useState(() => (value === null ? "" : String(value)));
+
+    // A dialog can receive its value after mount (prefilling from the record),
+    // so keep the raw text in step without fighting what the user is typing.
+    useEffect(() => {
+      setText(current => (moneyNumber(current) === value ? current : value === null ? "" : String(value)));
+    }, [value]);
 
     function handleChange(next: string) {
       setText(next);

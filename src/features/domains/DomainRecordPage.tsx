@@ -10,11 +10,13 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { RecommendedActionBadge, RiskBadge, StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DomainFormDialog } from "@/features/domains/components/DomainFormDialog";
-import { useDomainActivityQuery, useDomainsQuery } from "@/features/domains/queries";
+import { DomainEditCard } from "@/features/domains/components/DomainEditCard";
+import { useArchiveDomain, useDomainActivityQuery, useDomainsQuery, useQuickUpdateDomain } from "@/features/domains/queries";
 import { getTld, ownedPortfolio } from "@/lib/domain-rules";
 import { formatDate, money, percent, relativeDays, signedMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import type { DomainUpdate } from "@/types/database";
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -58,6 +60,8 @@ export function DomainRecordPage() {
   const [editing, setEditing] = useState(false);
 
   const { data: rows, isLoading, isError, refetch, isFetching } = useDomainsQuery();
+  const quickUpdate = useQuickUpdateDomain();
+  const archiveMutation = useArchiveDomain();
   const portfolio = useMemo(() => ownedPortfolio(rows ?? []), [rows]);
 
   const position = Number(index);
@@ -221,10 +225,36 @@ export function DomainRecordPage() {
         )}
       </section>
 
-      <DomainFormDialog
+      <DomainEditCard
         open={editing}
         onOpenChange={setEditing}
         domain={domain}
+        onSubmit={async input => {
+          const values: DomainUpdate = {
+            purchase_price: input.purchasePrice,
+            purchase_date: input.purchaseDate,
+            registrar: input.registrar || null,
+            purchase_currency: input.currency,
+            auto_renew: input.autoRenew,
+          };
+          if (input.markSold) {
+            values.status = "sold";
+            values.sold_date = input.soldDate;
+            values.sale_price = input.salePrice;
+            values.notes = input.saleNotes || null;
+          }
+
+          await quickUpdate.mutateAsync({ previous: domain, values });
+
+          if (input.markSold) {
+            // The sale lives on its own page, so the record stops resolving here.
+            await archiveMutation.mutateAsync({ domainId: domain.id, reason: "sold" });
+            toast.success(t("domains.sold.done", { domain: domain.domain }));
+            navigate("/sales");
+            return;
+          }
+          toast.success(t("domains.detail.updated", { domain: domain.domain }));
+        }}
       />
     </div>
   );

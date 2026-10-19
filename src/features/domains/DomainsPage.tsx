@@ -22,7 +22,7 @@ import {
   PurchaseDetailsDialog,
 } from "@/features/domains/components/DomainQuickDialogs";
 import { RowActionsMenu } from "@/features/domains/components/RowActionsMenu";
-import { DomainsToolbar, type DomainView } from "@/features/domains/components/DomainsToolbar";
+import { DomainsToolbar } from "@/features/domains/components/DomainsToolbar";
 import { createDomainColumns, DEFAULT_VISIBLE_COLUMNS } from "@/features/domains/components/columns";
 import { exportDomains } from "@/features/domains/export";
 import { applyFilters, EMPTY_FILTERS, facetValues, type DomainFilters } from "@/features/domains/filters";
@@ -56,7 +56,6 @@ export function DomainsPage() {
   const navigate = useNavigate();
 
   const [filters, setFilters] = useState<DomainFilters>(EMPTY_FILTERS);
-  const [view, setView] = useLocalStorage<DomainView>("domainfolio.domains-view", "table");
   const [columnVisibility, setColumnVisibility] = useLocalStorage<VisibilityState>(
     "domainfolio.domain-columns",
     DEFAULT_COLUMN_VISIBILITY
@@ -243,8 +242,6 @@ export function DomainsPage() {
         onFiltersChange={setFilters}
         facets={facets}
         folders={folders ?? []}
-        view={view}
-        onViewChange={setView}
         columns={columnPicker}
         columnVisibility={effectiveColumnVisibility}
         onColumnVisibilityChange={setColumnVisibility}

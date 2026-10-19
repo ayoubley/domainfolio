@@ -6,8 +6,6 @@ import {
   Download,
   FolderTree,
   Globe,
-  LayoutGrid,
-  List,
   Plus,
   SlidersHorizontal,
   X,
@@ -15,7 +13,6 @@ import {
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { SearchInput } from "@/components/shared/SearchInput";
-import { SegmentedControl } from "@/components/shared/SegmentedControl";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -36,8 +33,6 @@ import type { DomainStatus, FolderRow, PurchaseCurrency, RenewalDecision } from 
 import { countActiveFilters, type DomainFilters, type ListedFilter } from "@/features/domains/filters";
 import { folderColorClass } from "@/features/domains/folder-colors";
 import { cn } from "@/lib/utils";
-
-export type DomainView = "table" | "cards";
 
 type Facets = {
   registrars: string[];
@@ -92,8 +87,6 @@ export function DomainsToolbar({
   onFiltersChange,
   facets,
   folders,
-  view,
-  onViewChange,
   columns,
   columnVisibility,
   onColumnVisibilityChange,
@@ -105,8 +98,6 @@ export function DomainsToolbar({
   onFiltersChange: (filters: DomainFilters) => void;
   facets: Facets;
   folders: FolderRow[];
-  view: DomainView;
-  onViewChange: (view: DomainView) => void;
   columns: { id: string; label: string; hideable: boolean }[];
   columnVisibility: Record<string, boolean>;
   onColumnVisibilityChange: (visibility: Record<string, boolean>) => void;
@@ -407,17 +398,6 @@ export function DomainsToolbar({
             </div>
           </PopoverContent>
         </Popover>
-
-        <SegmentedControl<DomainView>
-          value={view}
-          onValueChange={onViewChange}
-          ariaLabel={t("common.view")}
-          options={[
-            { value: "table", label: t("domains.viewTable"), icon: List },
-            { value: "cards", label: t("domains.viewCards"), icon: LayoutGrid },
-          ]}
-          className="hidden sm:inline-flex"
-        />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

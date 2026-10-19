@@ -7,7 +7,7 @@ export type SegmentedOption<T extends string> = {
   icon?: ComponentType<{ className?: string }>;
 };
 
-/** A small segmented control — the table/cards and light/dark switchers use it. */
+/** A small segmented control — the renewals window switcher uses it. */
 export function SegmentedControl<T extends string>({
   value,
   onValueChange,
