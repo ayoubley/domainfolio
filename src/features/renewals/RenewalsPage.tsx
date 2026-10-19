@@ -12,7 +12,7 @@ import { SegmentedControl } from "@/components/shared/SegmentedControl";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
-import { SelectionBar, selectColumn } from "@/features/domains/components/SelectionBar";
+import { SelectionBar, numberColumn, selectColumn } from "@/features/domains/components/SelectionBar";
 import { RenewDomainDialog } from "@/features/domains/components/DomainQuickDialogs";
 import { useDeleteDomain, useDomainsQuery, useRenewDomain } from "@/features/domains/queries";
 import { deriveDomains, isExpired, summarizePortfolio } from "@/lib/domain-rules";
@@ -63,6 +63,7 @@ export function RenewalsPage() {
 
   const columns = useMemo<ColumnDef<DerivedDomain, unknown>[]>(
     () => [
+      numberColumn(t),
       selectColumn(t),
       {
         id: "domain",
@@ -156,7 +157,7 @@ export function RenewalsPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="flex flex-col gap-5 md:h-full md:min-h-0">
       <PageHeader title={t("renewals.title")} description={t("renewals.subtitle")} />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -217,22 +218,24 @@ export function RenewalsPage() {
       {isError ? (
         <ErrorState onRetry={() => void refetch()} retrying={isFetching} />
       ) : (
-        <DataTable<DerivedDomain>
-          columns={columns}
-          data={list}
-          getRowId={row => row.id}
-          isLoading={isLoading}
-          onSelectionChange={setSelected}
-          initialSorting={[{ id: "daysLeft", desc: false }]}
-          emptyState={
-            <EmptyState
-              compact
-              icon={CalendarClock}
-              title={t("renewals.empty")}
-              description={t("renewals.emptyHint")}
-            />
-          }
-        />
+        <div className="min-h-0 md:flex-1">
+          <DataTable<DerivedDomain>
+            columns={columns}
+            data={list}
+            getRowId={row => row.id}
+            isLoading={isLoading}
+            onSelectionChange={setSelected}
+            initialSorting={[{ id: "daysLeft", desc: false }]}
+            emptyState={
+              <EmptyState
+                compact
+                icon={CalendarClock}
+                title={t("renewals.empty")}
+                description={t("renewals.emptyHint")}
+              />
+            }
+          />
+        </div>
       )}
 
       <RenewDomainDialog

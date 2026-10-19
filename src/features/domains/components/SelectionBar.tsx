@@ -7,6 +7,25 @@ import { Button } from "@/components/ui/button";
 import type { DerivedDomain } from "@/lib/domain-rules";
 
 /**
+ * The leading row number. It counts the table as it is sorted and filtered, so
+ * the visible rows always read 1, 2, 3 downward.
+ */
+export function numberColumn(t: TFunction): ColumnDef<DerivedDomain, unknown> {
+  return {
+    id: "index",
+    size: 44,
+    enableSorting: false,
+    enableHiding: false,
+    header: t("domains.columns.index"),
+    cell: ({ row, table }) => (
+      <span className="tabular text-2xs text-muted-foreground">
+        {table.getSortedRowModel().rows.findIndex(candidate => candidate.id === row.id) + 1}
+      </span>
+    ),
+  };
+}
+
+/**
  * The bulk-selection pair: the tick-box column and the bar that appears once
  * something is ticked. Every list page uses the same two, so ticking rows and
  * acting on them reads the same wherever you are.

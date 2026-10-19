@@ -146,10 +146,15 @@ export function DataTable<TData>({
   }
 
   return (
-    <div className={cn("space-y-3", className)}>
-      <div className="overflow-hidden rounded-lg border border-border bg-card shadow-xs">
+    <div className={cn("flex h-full min-h-0 flex-col gap-3", className)}>
+      {/*
+       * Only this frame scrolls: the page header, the toolbar and the pager
+       * stay put while the rows move. The header row sticks to the top of the
+       * frame, so the columns never leave the screen either.
+       */}
+      <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-border bg-card shadow-xs">
         <Table>
-          <TableHeader>
+          <TableHeader className="sticky top-0 z-10 bg-card">
             {table.getHeaderGroups().map(headerGroup => (
               <TableRow key={headerGroup.id} className="hover:bg-transparent">
                 {headerGroup.headers.map(header => {
@@ -248,7 +253,7 @@ function PaginationFooter<TData>({
   const pageSize = table.getState().pagination.pageSize;
 
   return (
-    <div className="flex flex-col items-center justify-between gap-3 text-xs text-muted-foreground sm:flex-row">
+    <div className="flex shrink-0 flex-col items-center justify-between gap-3 text-xs text-muted-foreground sm:flex-row">
       <span className="tabular">
         {(labels?.showing ?? t("common.showing"))} {pageIndex * pageSize + 1}–
         {Math.min((pageIndex + 1) * pageSize, total)} {labels?.of ?? t("common.of")} {total}

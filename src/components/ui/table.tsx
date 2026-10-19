@@ -4,7 +4,10 @@ import { cn } from "@/lib/utils";
 
 export const Table = forwardRef<HTMLTableElement, HTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => (
-    <div className="relative w-full overflow-x-auto">
+    // Horizontal scrolling lives on the table's frame (see DataTable), so this
+    // wrapper must not become a scroll container: that would anchor the sticky
+    // header to a box that never scrolls vertically.
+    <div className="relative w-full">
       <table ref={ref} className={cn("w-full caption-bottom border-collapse text-2sm", className)} {...props} />
     </div>
   )

@@ -75,6 +75,7 @@ export function ArchivePage() {
       onQuickUpdate: handleQuickUpdate,
       onOpenRecord: handleOpenRecord,
       positions,
+      numbering: "sequence",
       renderActions: domain => (
         <Button variant="outline" size="sm" onClick={() => void handleRestore(domain)}>
           <ArchiveRestore />
@@ -113,7 +114,7 @@ export function ArchivePage() {
 
   return (
     // `relative` keeps the absolutely positioned live region inside the page.
-    <div className="relative space-y-5">
+    <div className="relative flex flex-col gap-5 md:h-full md:min-h-0">
       <PageHeader title={t("archive.title")} description={t("archive.subtitle")} />
 
       {selected.length > 0 ? (
@@ -141,26 +142,28 @@ export function ArchivePage() {
       {isError ? (
         <ErrorState onRetry={() => void refetch()} retrying={isFetching} />
       ) : (
-        <DataTable<DerivedDomain>
-          columns={columns}
-          data={archived}
-          getRowId={row => row.id}
-          isLoading={isLoading}
-          onSelectionChange={setSelected}
-          initialSorting={[{ id: "archivedAt", desc: true }]}
-          emptyState={
-            <EmptyState
-              icon={PackageOpen}
-              title={t("archive.emptyTitle")}
-              description={t("archive.emptyBody")}
-              action={
-                <Button variant="outline" size="sm" onClick={() => navigate("/domains")}>
-                  {t("nav.domains")}
-                </Button>
-              }
-            />
-          }
-        />
+        <div className="min-h-0 md:flex-1">
+          <DataTable<DerivedDomain>
+            columns={columns}
+            data={archived}
+            getRowId={row => row.id}
+            isLoading={isLoading}
+            onSelectionChange={setSelected}
+            initialSorting={[{ id: "archivedAt", desc: true }]}
+            emptyState={
+              <EmptyState
+                icon={PackageOpen}
+                title={t("archive.emptyTitle")}
+                description={t("archive.emptyBody")}
+                action={
+                  <Button variant="outline" size="sm" onClick={() => navigate("/domains")}>
+                    {t("nav.domains")}
+                  </Button>
+                }
+              />
+            }
+          />
+        </div>
       )}
 
       <ConfirmDialog

@@ -214,7 +214,7 @@ export function DomainsPage() {
     // `relative` keeps the screen-reader live region (which is absolutely
     // positioned) inside the page, so it can never stretch the document and
     // leave an empty scroll area under the app.
-    <div className="relative space-y-5">
+    <div className="relative flex flex-col gap-5 md:h-full md:min-h-0">
       <Confetti fire={confettiFire} />
 
       <PageHeader title={t("domains.title")} description={workspace ? t("domains.subtitle") : t("workspace.label")} />
@@ -257,60 +257,62 @@ export function DomainsPage() {
         </Button>
       </SelectionBar>
 
-      {isError ? (
-        <ErrorState onRetry={() => void refetch()} retrying={isFetching} />
-      ) : isEmptyPortfolio ? (
-        <div className="rounded-lg border border-dashed border-border-strong bg-card">
-          <EmptyState
-            icon={Tag}
-            title={t("domains.emptyTitle")}
-            description={t("domains.emptyBody")}
-            action={
-              <Button
-                variant="primary"
-                onClick={async () => {
-                  const count = await demoMutation.mutateAsync();
-                  toast.success(t("domains.demoLoaded", { count }));
-                }}
-                loading={demoMutation.isPending}
-              >
-                <Sparkles />
-                {t("domains.loadDemo")}
-              </Button>
-            }
-            secondaryAction={
-              <Button variant="outline" onClick={() => setImportOpen(true)}>
-                {t("domains.addDomain")}
-              </Button>
-            }
-          />
-        </div>
-      ) : (
-        <DataTable<DerivedDomain>
-          columns={columns}
-          data={filtered}
-          getRowId={row => row.id}
-          isLoading={isLoading}
-          onSelectionChange={setSelected}
-          columnVisibility={effectiveColumnVisibility}
-          onColumnVisibilityChange={setColumnVisibility}
-          initialSorting={[{ id: "expiryDate", desc: false }]}
-          renderMobileCard={domain => <DomainCard domain={domain} />}
-          emptyState={
+      <div className="min-h-0 md:flex-1">
+        {isError ? (
+          <ErrorState onRetry={() => void refetch()} retrying={isFetching} />
+        ) : isEmptyPortfolio ? (
+          <div className="rounded-lg border border-dashed border-border-strong bg-card">
             <EmptyState
-              compact
-              icon={FolderOpen}
-              title={t("domains.noResults")}
-              description={t("domains.noResultsHint")}
+              icon={Tag}
+              title={t("domains.emptyTitle")}
+              description={t("domains.emptyBody")}
               action={
-                <Button variant="outline" size="sm" onClick={() => setFilters(EMPTY_FILTERS)}>
-                  {t("common.clearAll")}
+                <Button
+                  variant="primary"
+                  onClick={async () => {
+                    const count = await demoMutation.mutateAsync();
+                    toast.success(t("domains.demoLoaded", { count }));
+                  }}
+                  loading={demoMutation.isPending}
+                >
+                  <Sparkles />
+                  {t("domains.loadDemo")}
+                </Button>
+              }
+              secondaryAction={
+                <Button variant="outline" onClick={() => setImportOpen(true)}>
+                  {t("domains.addDomain")}
                 </Button>
               }
             />
-          }
-        />
-      )}
+          </div>
+        ) : (
+          <DataTable<DerivedDomain>
+            columns={columns}
+            data={filtered}
+            getRowId={row => row.id}
+            isLoading={isLoading}
+            onSelectionChange={setSelected}
+            columnVisibility={effectiveColumnVisibility}
+            onColumnVisibilityChange={setColumnVisibility}
+            initialSorting={[{ id: "expiryDate", desc: false }]}
+            renderMobileCard={domain => <DomainCard domain={domain} />}
+            emptyState={
+              <EmptyState
+                compact
+                icon={FolderOpen}
+                title={t("domains.noResults")}
+                description={t("domains.noResultsHint")}
+                action={
+                  <Button variant="outline" size="sm" onClick={() => setFilters(EMPTY_FILTERS)}>
+                    {t("common.clearAll")}
+                  </Button>
+                }
+              />
+            }
+          />
+        )}
+      </div>
 
       <DomainFormDialog
         open={Boolean(editing)}

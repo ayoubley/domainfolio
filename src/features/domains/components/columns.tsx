@@ -20,6 +20,12 @@ export type ColumnContext = {
   onOpenRecord: (domain: DerivedDomain) => void;
   /** 1-based portfolio position per domain id, for the leading number column. */
   positions: Map<string, number>;
+  /**
+   * What the leading number means: the portfolio position that `/domains/<n>`
+   * uses, or 1..n in the table's current order for the lists that have no
+   * record order of their own (the archive).
+   */
+  numbering?: "position" | "sequence";
   /** The ⋯ row menu, supplied by the page so the menu owns its dialogs. */
   renderActions: (domain: DerivedDomain) => ReactNode;
 };
@@ -39,6 +45,7 @@ export function createDomainColumns({
   onQuickUpdate,
   onOpenRecord,
   positions,
+  numbering = "position",
   renderActions,
 }: ColumnContext): ColumnDef<DerivedDomain, unknown>[] {
   return [
@@ -48,8 +55,12 @@ export function createDomainColumns({
       enableSorting: false,
       enableHiding: false,
       header: t("domains.columns.index"),
-      cell: ({ row }) => (
-        <span className="tabular text-2xs text-muted-foreground">{positions.get(row.original.id) ?? "—"}</span>
+      cell: ({ row, table }) => (
+        <span className="tabular text-2xs text-muted-foreground">
+          {numbering === "sequence"
+            ? table.getSortedRowModel().rows.findIndex(candidate => candidate.id === row.id) + 1
+            : (positions.get(row.original.id) ?? "—")}
+        </span>
       ),
     },
     selectColumn(t),

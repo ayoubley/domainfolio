@@ -11,7 +11,7 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { LifecycleBadge } from "@/features/domains/components/DomainCells";
-import { SelectionBar, selectColumn } from "@/features/domains/components/SelectionBar";
+import { SelectionBar, numberColumn, selectColumn } from "@/features/domains/components/SelectionBar";
 import { useDeleteDomain, useDomainsQuery } from "@/features/domains/queries";
 import { deriveDomains, isExpired } from "@/lib/domain-rules";
 import type { DerivedDomain } from "@/lib/domain-rules";
@@ -34,6 +34,7 @@ export function ExpiredPage() {
 
   const columns = useMemo<ColumnDef<DerivedDomain, unknown>[]>(
     () => [
+      numberColumn(t),
       selectColumn(t),
       {
         id: "domain",
@@ -111,7 +112,7 @@ export function ExpiredPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="flex flex-col gap-5 md:h-full md:min-h-0">
       <PageHeader title={t("expired.title")} description={t("expired.subtitle")} />
 
       <SelectionBar count={selected.length} onClear={() => setSelected([])}>
@@ -129,17 +130,19 @@ export function ExpiredPage() {
       {isError ? (
         <ErrorState onRetry={() => void refetch()} retrying={isFetching} />
       ) : (
-        <DataTable<DerivedDomain>
-          columns={columns}
-          data={expired}
-          getRowId={row => row.id}
-          isLoading={isLoading}
-          onSelectionChange={setSelected}
-          initialSorting={[{ id: "daysLeft", desc: true }]}
-          emptyState={
-            <EmptyState icon={CalendarX2} title={t("expired.emptyTitle")} description={t("expired.emptyBody")} />
-          }
-        />
+        <div className="min-h-0 md:flex-1">
+          <DataTable<DerivedDomain>
+            columns={columns}
+            data={expired}
+            getRowId={row => row.id}
+            isLoading={isLoading}
+            onSelectionChange={setSelected}
+            initialSorting={[{ id: "daysLeft", desc: true }]}
+            emptyState={
+              <EmptyState icon={CalendarX2} title={t("expired.emptyTitle")} description={t("expired.emptyBody")} />
+            }
+          />
+        </div>
       )}
 
       {/* Deleting from a list is final — the row leaves the database. */}

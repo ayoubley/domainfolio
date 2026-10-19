@@ -148,7 +148,7 @@ export function AppShell() {
           onNewDomain={() => setImportOpen(true)}
         />
         <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-[1400px] p-4 sm:p-6">
+          <div className="mx-auto h-full w-full max-w-[1400px] p-4 sm:p-6">
             <RouteErrorBoundary>
               <Outlet />
             </RouteErrorBoundary>

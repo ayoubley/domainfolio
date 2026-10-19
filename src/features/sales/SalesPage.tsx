@@ -11,7 +11,7 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { DomainFormDialog } from "@/features/domains/components/DomainFormDialog";
-import { SelectionBar, selectColumn } from "@/features/domains/components/SelectionBar";
+import { SelectionBar, numberColumn, selectColumn } from "@/features/domains/components/SelectionBar";
 import { useDeleteDomain, useDomainsQuery } from "@/features/domains/queries";
 import { deriveDomains, isSold } from "@/lib/domain-rules";
 import type { DerivedDomain } from "@/lib/domain-rules";
@@ -36,6 +36,7 @@ export function SalesPage() {
 
   const columns = useMemo<ColumnDef<DerivedDomain, unknown>[]>(
     () => [
+      numberColumn(t),
       selectColumn(t),
       {
         id: "domain",
@@ -159,7 +160,7 @@ export function SalesPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="flex flex-col gap-5 md:h-full md:min-h-0">
       <PageHeader title={t("sales.title")} description={t("sales.subtitle")} />
 
       <SelectionBar count={selected.length} onClear={() => setSelected([])}>
@@ -177,17 +178,19 @@ export function SalesPage() {
       {isError ? (
         <ErrorState onRetry={() => void refetch()} retrying={isFetching} />
       ) : (
-        <DataTable<DerivedDomain>
-          columns={columns}
-          data={sold}
-          getRowId={row => row.id}
-          isLoading={isLoading}
-          onSelectionChange={setSelected}
-          initialSorting={[{ id: "soldDate", desc: true }]}
-          emptyState={
-            <EmptyState icon={BadgeDollarSign} title={t("sales.emptyTitle")} description={t("sales.emptyBody")} />
-          }
-        />
+        <div className="min-h-0 md:flex-1">
+          <DataTable<DerivedDomain>
+            columns={columns}
+            data={sold}
+            getRowId={row => row.id}
+            isLoading={isLoading}
+            onSelectionChange={setSelected}
+            initialSorting={[{ id: "soldDate", desc: true }]}
+            emptyState={
+              <EmptyState icon={BadgeDollarSign} title={t("sales.emptyTitle")} description={t("sales.emptyBody")} />
+            }
+          />
+        </div>
       )}
 
       <DomainFormDialog open={Boolean(editing)} onOpenChange={open => !open && setEditing(null)} domain={editing} />
