@@ -49,9 +49,15 @@ export function SalesPage() {
             >
               <Pencil className="size-3.5" />
             </Button>
-            <StatusBadge status={row.original.effectiveStatus} />
           </span>
         ),
+      },
+      {
+        id: "status",
+        accessorFn: row => row.effectiveStatus,
+        header: t("status.label"),
+        size: 140,
+        cell: ({ row }) => <StatusBadge status={row.original.effectiveStatus} />,
       },
       {
         id: "purchasePrice",

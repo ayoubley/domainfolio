@@ -326,10 +326,6 @@ export const en = {
       confirm_one: "Import {{count}} domain",
       confirm_other: "Import {{count}} domains",
     },
-    source: {
-      manual: "Manual",
-      imported: "Imported",
-    },
     filtersActive_one: "{{count}} filter active",
     filtersActive_other: "{{count}} filters active",
     sortAsc: "Sort ascending",

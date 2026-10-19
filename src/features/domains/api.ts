@@ -222,34 +222,27 @@ export async function updateDomain(input: {
   return data;
 }
 
-/**
- * Bulk create for the import wizard. One insert for the whole batch (so a
- * 200-row import is a single round-trip, not 200) plus one activity insert.
- */
-export async function createDomainsBulk(input: {
+/** Rows per round-trip. A whole spreadsheet normally travels in one request. */
+const BULK_CHUNK = 500;
+
+function inChunks<T>(items: T[]): T[][] {
+  const groups: T[][] = [];
+  for (let index = 0; index < items.length; index += BULK_CHUNK) {
+    groups.push(items.slice(index, index + BULK_CHUNK));
+  }
+  return groups;
+}
+
+/** One activity entry per imported row, also written in bulk. */
+async function logImportActivity(input: {
   workspaceId: string;
   userId: string;
-  rows: Record<string, unknown>[];
-}): Promise<DomainRow[]> {
-  if (input.rows.length === 0) return [];
-
-  const payload = input.rows.map(row => {
-    const cleaned = toDomainPayload(row) as DomainInsert;
-    return {
-      ...cleaned,
-      workspace_id: input.workspaceId,
-      user_id: input.userId,
-      domain: cleaned.domain as string,
-    };
-  });
-
-  const { data, error } = await supabase.from("domains").insert(payload).select("*");
-  if (error) throw error;
-
-  const created = data ?? [];
-  if (created.length > 0) {
+  rows: DomainRow[];
+}): Promise<void> {
+  if (input.rows.length === 0) return;
+  for (const group of inChunks(input.rows)) {
     await supabase.from("domain_activity").insert(
-      created.map(row => ({
+      group.map(row => ({
         workspace_id: input.workspaceId,
         user_id: input.userId,
         domain_id: row.id,
@@ -259,8 +252,72 @@ export async function createDomainsBulk(input: {
       }))
     );
   }
+}
 
+/**
+ * Bulk create for the import wizard. One insert per batch (so a 200-row import
+ * is a single round-trip, not 200) plus one bulk activity insert.
+ */
+export async function createDomainsBulk(input: {
+  workspaceId: string;
+  userId: string;
+  rows: Record<string, unknown>[];
+}): Promise<DomainRow[]> {
+  if (input.rows.length === 0) return [];
+  const created: DomainRow[] = [];
+
+  for (const group of inChunks(input.rows)) {
+    const payload = group.map(row => {
+      const cleaned = toDomainPayload(row) as DomainInsert;
+      return {
+        ...cleaned,
+        workspace_id: input.workspaceId,
+        user_id: input.userId,
+        domain: cleaned.domain as string,
+      };
+    });
+
+    const { data, error } = await supabase.from("domains").insert(payload).select("*");
+    if (error) throw error;
+    created.push(...(data ?? []));
+  }
+
+  await logImportActivity({ workspaceId: input.workspaceId, userId: input.userId, rows: created });
   return created;
+}
+
+/**
+ * Re-importing a name that sits in the archive brings it back: one upsert per
+ * batch matches on (workspace_id, domain), so the existing row is updated with
+ * the file's values and the archive flags are cleared — two round-trips for a
+ * whole sheet, never one request per domain.
+ */
+export async function restoreImportedDomains(input: {
+  workspaceId: string;
+  userId: string;
+  rows: Record<string, unknown>[];
+}): Promise<DomainRow[]> {
+  if (input.rows.length === 0) return [];
+  const restored: DomainRow[] = [];
+
+  for (const group of inChunks(input.rows)) {
+    const payload = group.map(row => ({
+      ...(toDomainPayload(row) as DomainInsert),
+      workspace_id: input.workspaceId,
+      archived_at: null,
+      archive_reason: null,
+    }));
+
+    const { data, error } = await supabase
+      .from("domains")
+      .upsert(payload, { onConflict: "workspace_id,domain" })
+      .select("*");
+    if (error) throw error;
+    restored.push(...(data ?? []));
+  }
+
+  await logImportActivity({ workspaceId: input.workspaceId, userId: input.userId, rows: restored });
+  return restored;
 }
 
 export async function renewDomain(input: {

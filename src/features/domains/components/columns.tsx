@@ -5,7 +5,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   AutoRenewSwitch,
   LifecycleBadge,
-  SourceBadge,
   StatusSelect,
 } from "@/features/domains/components/DomainCells";
 import type { DerivedDomain } from "@/lib/domain-rules";
@@ -102,7 +101,6 @@ export function createDomainColumns({
               {renderActions(row.original)}
             </span>
             {row.original.lifecycle ? <LifecycleBadge tone={row.original.lifecycle} /> : null}
-            <SourceBadge source={row.original.source} />
             {row.original.archived_at ? (
               <span className="rounded bg-muted px-1 text-2xs text-muted-foreground">{t("nav.archive")}</span>
             ) : null}

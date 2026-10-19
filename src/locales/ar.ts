@@ -377,10 +377,6 @@ export const ar: LooseDeep<TranslationResource> = {
       confirm_many: "استيراد {{count}} نطاقًا",
       confirm_other: "استيراد {{count}} نطاق",
     },
-    source: {
-      manual: "يدوي",
-      imported: "مستورد",
-    },
     filtersActive_zero: "لا فلاتر مُفعّلة",
     filtersActive_one: "فلتر واحد مُفعّل",
     filtersActive_two: "فلتران مُفعّلان",

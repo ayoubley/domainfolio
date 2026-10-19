@@ -37,10 +37,16 @@ export function ExpiredPage() {
             <span dir="ltr" className="font-medium tabular text-foreground">
               {row.original.domain}
             </span>
-            <StatusBadge status={row.original.effectiveStatus} />
             {row.original.lifecycle ? <LifecycleBadge tone={row.original.lifecycle} /> : null}
           </span>
         ),
+      },
+      {
+        id: "status",
+        accessorFn: row => row.effectiveStatus,
+        header: t("status.label"),
+        size: 140,
+        cell: ({ row }) => <StatusBadge status={row.original.effectiveStatus} />,
       },
       {
         id: "expiryDate",

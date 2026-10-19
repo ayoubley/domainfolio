@@ -19,6 +19,7 @@ import {
   renewDomain,
   restoreDomain,
   restoreDomains,
+  restoreImportedDomains,
   updateDomain,
   updateFolder,
 } from "./api";
@@ -97,6 +98,24 @@ export function useBulkCreateDomains() {
     mutationFn: (rows: Record<string, unknown>[]) => {
       if (!workspaceId || !user) throw new Error("No workspace");
       return createDomainsBulk({ workspaceId, userId: user.id, rows });
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/**
+ * The import's second half: names that sit in the archive come back through a
+ * single bulk upsert rather than a write per domain.
+ */
+export function useRestoreImportedDomains() {
+  const { user } = useAuth();
+  const workspaceId = useWorkspace().current?.id ?? null;
+  const invalidate = useInvalidatePortfolio();
+
+  return useMutation({
+    mutationFn: (rows: Record<string, unknown>[]) => {
+      if (!workspaceId || !user) throw new Error("No workspace");
+      return restoreImportedDomains({ workspaceId, userId: user.id, rows });
     },
     onSuccess: invalidate,
   });

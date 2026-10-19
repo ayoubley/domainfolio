@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { StatusBadge, STATUS_VARIANT } from "@/components/shared/StatusBadge";
 import type { LifecycleTone } from "@/lib/domain-rules";
-import type { DomainSource, DomainStatus } from "@/types/database";
+import type { DomainStatus } from "@/types/database";
 import { cn } from "@/lib/utils";
 
 /** The four states the status column offers, in the order the owner listed them. */
@@ -22,17 +22,6 @@ export function LifecycleBadge({ tone }: { tone: LifecycleTone }) {
   const { t } = useTranslation();
   return (
     <Badge className={cn("border-transparent", LIFECYCLE_CLASS[tone])}>{t(`lifecycle.${tone}`)}</Badge>
-  );
-}
-
-/** "Imported" source badge — no connected account reports this name. */
-export function SourceBadge({ source }: { source: DomainSource }) {
-  const { t } = useTranslation();
-  if (source !== "imported") return null;
-  return (
-    <Badge variant="outline" className="text-muted-foreground">
-      {t("domains.source.imported")}
-    </Badge>
   );
 }
 

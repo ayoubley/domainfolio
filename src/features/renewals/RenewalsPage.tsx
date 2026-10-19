@@ -64,13 +64,17 @@ export function RenewalsPage() {
         header: t("domains.columns.domain"),
         size: 280,
         cell: ({ row }) => (
-          <span className="flex flex-wrap items-center gap-1.5">
-            <span dir="ltr" className="font-medium tabular text-foreground">
-              {row.original.domain}
-            </span>
-            <StatusBadge status={row.original.effectiveStatus} />
+          <span dir="ltr" className="font-medium tabular text-foreground">
+            {row.original.domain}
           </span>
         ),
+      },
+      {
+        id: "status",
+        accessorFn: row => row.effectiveStatus,
+        header: t("status.label"),
+        size: 140,
+        cell: ({ row }) => <StatusBadge status={row.original.effectiveStatus} />,
       },
       {
         id: "expiryDate",
