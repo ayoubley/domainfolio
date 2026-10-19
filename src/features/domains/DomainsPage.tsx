@@ -274,7 +274,7 @@ export function DomainsPage() {
             ) : (
               <Button size="sm" variant="outline" onClick={handleBulkArchive}>
                 <Trash2 />
-                {t("domains.bulk.delete")}
+                {t("domains.bulk.delete", { count: selected.length })}
               </Button>
             )}
             <Button size="sm" variant="outline" onClick={() => void exportDomains(selected, "xlsx")}>

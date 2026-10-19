@@ -317,6 +317,8 @@ export const en = {
       line: "Line {{line}}",
       blankRow: "(empty)",
       rowDuplicate: "Already in your portfolio",
+      restoring_one: "{{count}} comes back from the archive",
+      restoring_other: "{{count}} come back from the archive",
       preview: "Preview",
       done_one: "Imported {{count}} domain.",
       done_other: "Imported {{count}} domains.",
@@ -345,7 +347,8 @@ export const en = {
     bulk: {
       title_one: "{{count}} domain selected",
       title_other: "{{count}} domains selected",
-      delete: "Delete domains",
+      delete_one: "Delete domain",
+      delete_other: "Delete domains",
       restore: "Restore",
       export: "Export",
       clear: "Clear",
@@ -607,6 +610,12 @@ export const en = {
     title: "Archive",
     subtitle: "Domains you've parked. Nothing is ever deleted.",
     archivedOn: "Archived on",
+    deleteTitle: "Delete for good?",
+    deleteBody:
+      "Deleting from the archive is final: the domains leave the database and cannot be restored afterwards.",
+    deleteConfirm: "Delete for good",
+    deleted_one: "Deleted for good.",
+    deleted_other: "Deleted {{count}} domains for good.",
     emptyTitle: "Nothing archived yet",
     emptyBody:
       "Domains you archive, drop or sell land here, and any of them can be restored to the live portfolio.",

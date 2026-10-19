@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle2, Download, FileSpreadsheet, Loader2, Sparkles, Upload, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Download, FileSpreadsheet, FolderArchive, Loader2, Sparkles, Upload, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -20,7 +20,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { RegistrarSelect } from "@/features/domains/components/RegistrarSelect";
-import { useBulkCreateDomains, useDomainsQuery } from "@/features/domains/queries";
+import { useBulkCreateDomains, useDomainsQuery, useUpdateDomain } from "@/features/domains/queries";
 import {
   IMPORT_FIELDS,
   MAPPABLE_FIELDS,
@@ -37,7 +37,7 @@ import {
 import { PURCHASE_CURRENCIES } from "@/lib/constants";
 import { toIsoDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import type { PurchaseCurrency } from "@/types/database";
+import type { DomainRow, PurchaseCurrency } from "@/types/database";
 
 const NOT_MAPPED = "__unmapped__";
 
@@ -74,6 +74,7 @@ type Props = {
 export function ImportDomainsDialog({ open, onOpenChange, onImported }: Props) {
   const { t } = useTranslation();
   const bulkCreate = useBulkCreateDomains();
+  const restoreUpdate = useUpdateDomain();
   const { data: allDomains } = useDomainsQuery(true);
 
   const [tab, setTab] = useState("names");
@@ -95,9 +96,25 @@ export function ImportDomainsDialog({ open, onOpenChange, onImported }: Props) {
   }, [open]);
 
   const existingDomains = useMemo(
-    () => new Set((allDomains ?? []).map(row => row.domain)),
+    () => new Set((allDomains ?? []).filter(row => !row.archived_at).map(row => row.domain)),
     [allDomains]
   );
+
+  // Archived rows, keyed by name: importing one of these restores that record
+  // (archiving never deletes, so a re-import must not be a dead end).
+  const archivedDomains = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const row of allDomains ?? []) {
+      if (row.archived_at) map.set(row.domain, row.id);
+    }
+    return map;
+  }, [allDomains]);
+
+  const domainsById = useMemo(() => {
+    const map = new Map<string, DomainRow>();
+    for (const row of allDomains ?? []) map.set(row.id, row);
+    return map;
+  }, [allDomains]);
 
   /* ------------------------------ raw row sources ----------------------------- */
 
@@ -121,8 +138,8 @@ export function ImportDomainsDialog({ open, onOpenChange, onImported }: Props) {
   const raws = tab === "names" ? nameRaws : csvRaws;
 
   const preview = useMemo(
-    () => resolveImportRows({ raws, defaults, existingDomains }),
-    [raws, defaults, existingDomains]
+    () => resolveImportRows({ raws, defaults, existingDomains, archivedDomains }),
+    [raws, defaults, existingDomains, archivedDomains]
   );
 
   const issues = useMemo(
@@ -132,7 +149,7 @@ export function ImportDomainsDialog({ open, onOpenChange, onImported }: Props) {
 
   const previewRows = useMemo(() => preview.valid.slice(0, 5), [preview.valid]);
 
-  const busy = bulkCreate.isPending || reading;
+  const busy = bulkCreate.isPending || restoreUpdate.isPending || reading;
   const canImport = preview.valid.length > 0 && !busy;
 
   /* --------------------------------- handlers -------------------------------- */
@@ -175,12 +192,30 @@ export function ImportDomainsDialog({ open, onOpenChange, onImported }: Props) {
   }
 
   async function handleImport() {
-    const payloads = preview.valid.map(row => row.values as Record<string, unknown>);
-    if (payloads.length === 0) return;
+    const fresh = preview.valid.filter(row => !row.restoreId);
+    const restores = preview.valid.filter(row => row.restoreId);
+    if (fresh.length === 0 && restores.length === 0) return;
     try {
-      const created = await bulkCreate.mutateAsync(payloads);
-      toast.success(t("domains.import.done", { count: created.length }));
-      onImported?.(created.length);
+      const created = fresh.length
+        ? await bulkCreate.mutateAsync(fresh.map(row => row.values as Record<string, unknown>))
+        : [];
+
+      // Archived match: bring the existing record back with the file's values
+      // instead of inserting a second row (the name is unique per workspace).
+      let restored = 0;
+      for (const row of restores) {
+        const previous = row.restoreId ? domainsById.get(row.restoreId) : undefined;
+        if (!previous) continue;
+        await restoreUpdate.mutateAsync({
+          previous,
+          values: { ...(row.values as Record<string, unknown>), archived_at: null, archive_reason: null },
+        });
+        restored += 1;
+      }
+
+      const total = created.length + restored;
+      toast.success(t("domains.import.done", { count: total }));
+      onImported?.(total);
       setNamesText("");
       setSheet(null);
       setFileName("");
@@ -425,6 +460,12 @@ export function ImportDomainsDialog({ open, onOpenChange, onImported }: Props) {
                 <CheckCircle2 className="size-3.5 text-emerald-600 dark:text-emerald-400" />
                 {t("domains.import.ready", { count: preview.valid.length })}
               </span>
+              {preview.restores.length > 0 ? (
+                <span className="inline-flex items-center gap-1.5 text-primary">
+                  <FolderArchive className="size-3.5" />
+                  {t("domains.import.restoring", { count: preview.restores.length })}
+                </span>
+              ) : null}
               {preview.duplicates.length > 0 ? (
                 <span className="inline-flex items-center gap-1.5 text-amber-700 dark:text-amber-400">
                   <AlertTriangle className="size-3.5" />
@@ -496,7 +537,7 @@ export function ImportDomainsDialog({ open, onOpenChange, onImported }: Props) {
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
             {t("common.cancel")}
           </Button>
-          <Button type="button" variant="primary" loading={bulkCreate.isPending} disabled={!canImport} onClick={handleImport}>
+          <Button type="button" variant="primary" loading={busy} disabled={!canImport} onClick={handleImport}>
             {t("domains.import.confirm", { count: preview.valid.length })}
           </Button>
         </DialogFooter>

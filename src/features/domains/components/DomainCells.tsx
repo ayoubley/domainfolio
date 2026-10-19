@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { Badge, badgeVariants } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { STATUS_VARIANT } from "@/components/shared/StatusBadge";
+import { StatusBadge, STATUS_VARIANT } from "@/components/shared/StatusBadge";
 import type { LifecycleTone } from "@/lib/domain-rules";
 import type { DomainSource, DomainStatus } from "@/types/database";
 import { cn } from "@/lib/utils";
@@ -76,6 +76,14 @@ export function StatusSelect({
   disabled?: boolean;
 }) {
   const { t } = useTranslation();
+
+  // "Sold" is derived from the sale fields, not something this picker can set,
+  // so it reads as a badge instead of an empty select (the archive lists sold
+  // rows; the live table never shows them).
+  if (!STATUS_OPTIONS.includes(status as (typeof STATUS_OPTIONS)[number])) {
+    return <StatusBadge status={status} />;
+  }
+
   return (
     // Changing the status must never bubble to the row click.
     <span className="inline-flex" onClick={event => event.stopPropagation()}>

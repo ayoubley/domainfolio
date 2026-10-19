@@ -84,6 +84,12 @@ export type ImportRow = {
   values: ImportValues | null;
   errors: string[];
   duplicate: boolean;
+  /**
+   * Set when the name is already in the archive: the row is accepted, but it
+   * un-archives that record and applies the file's values instead of inserting
+   * a second copy (archiving never deletes, so re-importing must not fail).
+   */
+  restoreId?: string;
 };
 
 export type ImportValues = z.infer<typeof importRowSchema>;
@@ -93,6 +99,8 @@ export type ImportPreview = {
   valid: ImportRow[];
   invalid: ImportRow[];
   duplicates: ImportRow[];
+  /** Accepted rows that bring an archived domain back to the portfolio. */
+  restores: ImportRow[];
 };
 
 /* ------------------------------- parsing ---------------------------------- */
@@ -474,13 +482,16 @@ function applyDefaults(
 
 /**
  * Turns raw cells into validated rows against the shared import defaults.
- * `existingDomains` should hold normalised domains already in the workspace so
- * duplicates are reported instead of blowing up the insert.
+ * `existingDomains` should hold normalised domains already live in the workspace
+ * so duplicates are reported instead of blowing up the insert.
+ * `archivedDomains` maps a normalised domain to the id of its archived row:
+ * re-importing one of those restores the record instead of failing.
  */
 export function resolveImportRows(input: {
   raws: { line: number; cells: Partial<Record<ImportField, string>> }[];
   defaults: ImportDefaults;
   existingDomains: Set<string>;
+  archivedDomains?: Map<string, string>;
 }): ImportPreview {
   const seen = new Set<string>();
   const rows: ImportRow[] = input.raws.map(raw => {
@@ -499,6 +510,7 @@ export function resolveImportRows(input: {
 
     const duplicate = Boolean(domain) && (input.existingDomains.has(domain) || seen.has(domain));
     if (domain) seen.add(domain);
+    const restoreId = !duplicate && domain ? input.archivedDomains?.get(domain) : undefined;
 
     return {
       line: raw.line,
@@ -506,6 +518,7 @@ export function resolveImportRows(input: {
       values: parsed.success && !duplicate && errors.length === 0 ? parsed.data : null,
       errors,
       duplicate,
+      ...(restoreId ? { restoreId } : {}),
     };
   });
 
@@ -514,6 +527,7 @@ export function resolveImportRows(input: {
     valid: rows.filter(row => row.values !== null),
     invalid: rows.filter(row => row.values === null && !row.duplicate),
     duplicates: rows.filter(row => row.duplicate),
+    restores: rows.filter(row => row.values !== null && Boolean(row.restoreId)),
   };
 }
 
