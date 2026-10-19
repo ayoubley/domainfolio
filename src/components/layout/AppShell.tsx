@@ -112,7 +112,9 @@ export function AppShell() {
   }, [navigate]);
 
   const breadcrumbs = useMemo<Crumb[]>(() => {
-    const labelKey = CRUMB_LABELS[location.pathname];
+    // Deep routes (e.g. /domains/5) keep the crumb of the section they sit in.
+    const section = `/${location.pathname.split("/")[1] ?? ""}`;
+    const labelKey = CRUMB_LABELS[location.pathname] ?? CRUMB_LABELS[section];
     const base: Crumb = { label: t("app.name"), to: "/dashboard" };
     if (!labelKey) return [{ label: t("app.name") }];
     return [base, { label: t(labelKey) }];

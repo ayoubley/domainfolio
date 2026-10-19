@@ -29,6 +29,29 @@ export const ACTIVITY_ACTIONS = [
 
 export const NICHES = ["Brandable", "Keyword", "Geo", "Exact Match", "Trend"] as const;
 
+/**
+ * The registrar platforms the picker offers, in one fixed order. "Other" is a
+ * UI-only choice (see `RegistrarSelect`) that reveals a free-text field; it is
+ * never stored as a registrar name.
+ */
+export const REGISTRARS = [
+  "Spaceship",
+  "Dynadot",
+  "Namecheap",
+  "RayName",
+  "UnstoppableDomains",
+  "Namebright",
+  "GoDaddy",
+  "Porkbun",
+  "Squarespace",
+  "Webempresa",
+  "DreamHost",
+  "Nameslink",
+  "TrueHost.Cloud",
+] as const;
+
+export type Registrar = (typeof REGISTRARS)[number];
+
 /** Folder palette keys. The Tailwind classes for each live in `folderColorClass`. */
 export const FOLDER_COLORS = [
   "slate",

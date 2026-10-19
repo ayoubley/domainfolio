@@ -30,6 +30,9 @@ const DashboardPage = lazy(() =>
   import("@/features/dashboard/DashboardPage").then(module => ({ default: module.DashboardPage }))
 );
 const DomainsPage = lazy(() => import("@/features/domains/DomainsPage").then(module => ({ default: module.DomainsPage })));
+const DomainRecordPage = lazy(() =>
+  import("@/features/domains/DomainRecordPage").then(module => ({ default: module.DomainRecordPage }))
+);
 const RenewalsPage = lazy(() =>
   import("@/features/renewals/RenewalsPage").then(module => ({ default: module.RenewalsPage }))
 );
@@ -72,6 +75,7 @@ export const router = createBrowserRouter([
     children: [
       { path: "/dashboard", element: page(<DashboardPage />) },
       { path: "/domains", element: page(<DomainsPage />) },
+      { path: "/domains/:index", element: page(<DomainRecordPage />) },
       { path: "/renewals", element: page(<RenewalsPage />) },
       { path: "/sales", element: page(<SalesPage />) },
       { path: "/expired", element: page(<ExpiredPage />) },

@@ -34,6 +34,7 @@ import {
 } from "@/lib/constants";
 import { expiryAfterOneYear, getTld } from "@/lib/domain-rules";
 import { domainExists } from "@/features/domains/api";
+import { RegistrarSelect } from "@/features/domains/components/RegistrarSelect";
 import { useCreateDomain, useFoldersQuery, useUpdateDomain } from "@/features/domains/queries";
 import {
   EMPTY_DOMAIN_FORM,
@@ -197,7 +198,18 @@ export function DomainFormDialog({ open, onOpenChange, domain, initialPatch, onS
                 </div>
               </Field>
               <Field id="registrar" label={t("domains.form.registrar")} error={errorFor("registrar")}>
-                <Input id="registrar" placeholder={t("domains.form.registrarPlaceholder")} {...form.register("registrar")} />
+                <Controller
+                  control={form.control}
+                  name="registrar"
+                  render={({ field }) => (
+                    <RegistrarSelect
+                      id="registrar"
+                      value={field.value}
+                      onChange={field.onChange}
+                      invalid={Boolean(form.formState.errors.registrar)}
+                    />
+                  )}
+                />
               </Field>
               <Field id="acquisition" label={t("domains.form.acquisitionSource")} error={errorFor("acquisitionSource")}>
                 <Input

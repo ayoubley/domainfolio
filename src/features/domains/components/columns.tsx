@@ -13,15 +13,18 @@ export type ColumnContext = {
   t: TFunction;
   /** Optimistic single-field write used by the inline auto-renew toggle. */
   onQuickUpdate: (domain: DerivedDomain, values: DomainUpdate) => void;
-  onOpenDetail: (domain: DerivedDomain) => void;
+  /** Domain-name click → the domain's record page (`/domains/<n>`). */
+  onOpenRecord: (domain: DerivedDomain) => void;
+  /** 1-based portfolio position per domain id, for the leading number column. */
+  positions: Map<string, number>;
   /** The ⋯ row menu, supplied by the page so the menu owns its dialogs. */
   renderActions: (domain: DerivedDomain) => ReactNode;
 };
 
 /**
- * The domains table: six columns and nothing else — domain (with its ⋯ menu and
- * status badges), purchase price, purchase date, expiry date, registrar and the
- * auto-renew toggle.
+ * The domains table: the row number, the select checkboxes, then domain (name,
+ * its ⋯ menu and status badges), purchase price, purchase date, expiry date,
+ * registrar and the auto-renew toggle.
  *
  * Declared as object literals (not `createColumnHelper`) so the whole array is
  * precisely `ColumnDef<DerivedDomain, unknown>[]` without leaning on `any`.
@@ -29,10 +32,21 @@ export type ColumnContext = {
 export function createDomainColumns({
   t,
   onQuickUpdate,
-  onOpenDetail,
+  onOpenRecord,
+  positions,
   renderActions,
 }: ColumnContext): ColumnDef<DerivedDomain, unknown>[] {
   return [
+    {
+      id: "index",
+      size: 48,
+      enableSorting: false,
+      enableHiding: false,
+      header: t("domains.columns.index"),
+      cell: ({ row }) => (
+        <span className="tabular text-2xs text-muted-foreground">{positions.get(row.original.id) ?? "—"}</span>
+      ),
+    },
     {
       id: "select",
       size: 36,
@@ -60,29 +74,36 @@ export function createDomainColumns({
       header: t("domains.columns.domain"),
       size: 340,
       enableHiding: false,
-      cell: ({ row }) => (
-        <span className="flex flex-wrap items-center gap-1.5">
-          <span className="shrink-0" onClick={event => event.stopPropagation()}>
-            {renderActions(row.original)}
+      cell: ({ row }) => {
+        const position = positions.get(row.original.id);
+        return (
+          <span className="flex flex-wrap items-center gap-1.5">
+            {position ? (
+              <button
+                type="button"
+                onClick={event => {
+                  event.stopPropagation();
+                  onOpenRecord(row.original);
+                }}
+                className="font-medium tabular text-foreground transition-colors hover:text-primary"
+              >
+                {row.original.domain}
+              </button>
+            ) : (
+              <span className="font-medium tabular text-foreground">{row.original.domain}</span>
+            )}
+            <span className="shrink-0" onClick={event => event.stopPropagation()}>
+              {renderActions(row.original)}
+            </span>
+            <StatusBadge status={row.original.effectiveStatus} />
+            {row.original.lifecycle ? <LifecycleBadge tone={row.original.lifecycle} /> : null}
+            <SourceBadge source={row.original.source} />
+            {row.original.archived_at ? (
+              <span className="rounded bg-muted px-1 text-2xs text-muted-foreground">{t("nav.archive")}</span>
+            ) : null}
           </span>
-          <button
-            type="button"
-            onClick={event => {
-              event.stopPropagation();
-              onOpenDetail(row.original);
-            }}
-            className="font-medium tabular text-foreground transition-colors hover:text-primary"
-          >
-            {row.original.domain}
-          </button>
-          <StatusBadge status={row.original.effectiveStatus} />
-          {row.original.lifecycle ? <LifecycleBadge tone={row.original.lifecycle} /> : null}
-          <SourceBadge source={row.original.source} />
-          {row.original.archived_at ? (
-            <span className="rounded bg-muted px-1 text-2xs text-muted-foreground">{t("nav.archive")}</span>
-          ) : null}
-        </span>
-      ),
+        );
+      },
     },
     {
       id: "purchasePrice",
@@ -147,6 +168,7 @@ export function createDomainColumns({
 
 /** Columns shown before the user opens the column picker. */
 export const DEFAULT_VISIBLE_COLUMNS = [
+  "index",
   "select",
   "domain",
   "purchasePrice",

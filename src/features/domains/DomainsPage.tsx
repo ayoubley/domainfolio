@@ -40,7 +40,7 @@ import {
   useRenewDomain,
   useRestoreDomain,
 } from "@/features/domains/queries";
-import { deriveDomain, deriveDomains, isOwned } from "@/lib/domain-rules";
+import { deriveDomain, deriveDomains, isOwned, ownedPositions } from "@/lib/domain-rules";
 import type { DerivedDomain } from "@/lib/domain-rules";
 import { APP_EVENTS, onAppEvent } from "@/lib/events";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -82,6 +82,10 @@ export function DomainsPage() {
   const [archiveReason, setArchiveReason] = useState("");
 
   const { data: rows, isLoading, isError, refetch, isFetching } = useDomainsQuery(filters.includeArchived);
+  // The numbering and the /domains/<n> links always come from the active
+  // portfolio, so a number never points at a different domain because of a
+  // filter or the archive toggle.
+  const { data: activeRows } = useDomainsQuery();
   const { data: folders } = useFoldersQuery();
   const demoMutation = useLoadDemoData();
   const bulkArchive = useBulkArchiveDomains();
@@ -98,6 +102,7 @@ export function DomainsPage() {
   const owned = useMemo(() => derived.filter(isOwned), [derived]);
   const filtered = useMemo(() => applyFilters(owned, filters), [owned, filters]);
   const facets = useMemo(() => facetValues(owned), [owned]);
+  const positions = useMemo(() => ownedPositions(activeRows ?? []), [activeRows]);
 
   // A stored visibility map from an earlier version won't know the new columns,
   // so default the keys it's missing rather than hiding them.
@@ -178,10 +183,14 @@ export function DomainsPage() {
       createDomainColumns({
         t,
         onQuickUpdate: quickUpdateDomain,
-        onOpenDetail: domain => setEditing(domain),
+        onOpenRecord: domain => {
+          const position = positions.get(domain.id);
+          if (position) navigate(`/domains/${position}`);
+        },
+        positions,
         renderActions,
       }),
-    [t, quickUpdateDomain, renderActions]
+    [t, quickUpdateDomain, positions, renderActions, navigate]
   );
 
   const columnPicker = useMemo(

@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { PURCHASE_CURRENCIES } from "@/lib/constants";
+import { RegistrarSelect } from "@/features/domains/components/RegistrarSelect";
 import type { DerivedDomain } from "@/lib/domain-rules";
 import { toIsoDate } from "@/lib/format";
 import type { PurchaseCurrency } from "@/types/database";
@@ -81,13 +82,7 @@ export function PurchaseDetailsDialog({
             <DatePicker id="purchase-date" value={date} onChange={setDate} />
           </Field>
           <Field id="purchase-registrar" label={t("domains.form.registrar")}>
-            <Input
-              id="purchase-registrar"
-              autoComplete="off"
-              placeholder={t("domains.form.registrarPlaceholder")}
-              value={registrar}
-              onChange={event => setRegistrar(event.target.value)}
-            />
+            <RegistrarSelect id="purchase-registrar" value={registrar} onChange={setRegistrar} />
           </Field>
           <Field id="purchase-currency" label={t("domains.form.purchaseCurrency")}>
             <Select value={currency} onValueChange={value => setCurrency(value as PurchaseCurrency)}>

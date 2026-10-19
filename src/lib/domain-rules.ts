@@ -362,3 +362,24 @@ export function isExpired(record: Pick<DerivedDomain, "effectiveStatus">) {
 export function isOwned(record: Pick<DerivedDomain, "effectiveStatus">) {
   return !isSold(record) && !isExpired(record);
 }
+
+/** The Domains table order: soonest to expire first, undated domains last. */
+export function compareByExpiry(a: DerivedDomain, b: DerivedDomain) {
+  return (a.daysLeft ?? Number.POSITIVE_INFINITY) - (b.daysLeft ?? Number.POSITIVE_INFINITY);
+}
+
+/**
+ * The owned portfolio in the order the Domains table shows it. A row's number
+ * (1, 2, 3 …) is its position here, and `/domains/<number>` resolves the same
+ * way — so a record link always opens the domain it was copied from.
+ */
+export function ownedPortfolio(records: DomainRow[], now: Date = new Date()): DerivedDomain[] {
+  return deriveDomains(records, now).filter(isOwned).sort(compareByExpiry);
+}
+
+/** 1-based portfolio position of every owned domain, keyed by id. */
+export function ownedPositions(records: DomainRow[], now: Date = new Date()): Map<string, number> {
+  const positions = new Map<string, number>();
+  ownedPortfolio(records, now).forEach((record, index) => positions.set(record.id, index + 1));
+  return positions;
+}

@@ -349,6 +349,7 @@ export const en = {
       clear: "Clear",
     },
     columns: {
+      index: "#",
       domain: "Domain",
       registrar: "Registrar",
       purchaseDate: "Purchase date",
@@ -400,7 +401,9 @@ export const en = {
       renewalCost: "Renewal cost",
       renewalCostHint: "Leave blank if unknown — we never guess it.",
       registrar: "Registrar",
-      registrarPlaceholder: "e.g. Namecheap",
+      registrarPlaceholder: "Select a registrar",
+      registrarOther: "Another site",
+      registrarOtherPlaceholder: "Write the registrar name",
       status: "Status",
       statusHint: "Status is derived from sale and expiry dates, so it can update on its own.",
       renewalDecision: "Renewal decision",
@@ -470,6 +473,21 @@ export const en = {
       deleteBody:
         "This permanently removes {{domain}} and cannot be undone. Archive it instead if you might want it back.",
       deleted: "{{domain}} deleted.",
+    },
+    record: {
+      title: "Domain record",
+      subtitle:
+        "A central, documented record that gathers the asset data, the decisions, the computed values and the activity log.",
+      back: "All domains",
+      notFound: "We couldn't find that domain",
+      notFoundHint: "The number in the address doesn't match a domain in this portfolio any more.",
+      assets: "Asset data",
+      renewal: "Renewal & decision",
+      risk: "Risk level (0–30 days)",
+      recommended: "System recommendation",
+      finance: "Finance & performance",
+      holding: "Holding period",
+      activity: "Activity log",
     },
     folder: {
       none: "No folder",
@@ -547,6 +565,23 @@ export const en = {
   renewals: {
     title: "Renewals Center",
     subtitle: "Plan and approve what renews, and what doesn't.",
+    windows: "Renewal windows",
+    window30: "Within 30 days",
+    window60: "Within 60 days",
+    window90: "Within 90 days",
+    windowExpired: "Expired",
+    empty: "Nothing in this window",
+    emptyHint: "Domains move here as their expiry date gets closer.",
+    kpi: {
+      window: "Domains in the window",
+      windowHint: "Expiring within 30 days, counted from the stored expiry dates only.",
+      cost: "Documented renewal cost",
+      costHint: "The sum of recorded renewal costs. Nothing here is estimated.",
+      renewed: "Renewed domains",
+      renewedHint: "Domains whose renewal has already been recorded.",
+      review: "Costs to review",
+      reviewHint: "Domains due within 30 days that have no recorded renewal cost.",
+    },
   },
 
   sales: {
