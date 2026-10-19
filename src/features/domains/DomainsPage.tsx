@@ -15,7 +15,6 @@ import { Input } from "@/components/ui/input";
 import { DomainCard } from "@/features/domains/components/DomainCard";
 import { DomainFormDialog } from "@/features/domains/components/DomainFormDialog";
 import { ImportDomainsDialog } from "@/features/domains/components/ImportDomainsDialog";
-import { DomainSidePeek } from "@/features/domains/components/DomainSidePeek";
 import {
   MarkAsSoldDialog,
   NotesDialog,
@@ -53,7 +52,7 @@ const DEFAULT_COLUMN_VISIBILITY: VisibilityState = DEFAULT_VISIBLE_COLUMNS.reduc
 export function DomainsPage() {
   const { t } = useTranslation();
   const workspace = useWorkspace().current;
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
   const [filters, setFilters] = useState<DomainFilters>(EMPTY_FILTERS);
@@ -66,7 +65,6 @@ export function DomainsPage() {
   const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] = useState<DerivedDomain | null>(null);
   const [soldTarget, setSoldTarget] = useState<DerivedDomain | null>(null);
-  const [peekId, setPeekId] = useState<string | null>(null);
   const [selected, setSelected] = useState<DerivedDomain[]>([]);
   const [confettiFire, setConfettiFire] = useState(0);
 
@@ -107,16 +105,14 @@ export function DomainsPage() {
     [columnVisibility]
   );
 
-  const peekDomain = useMemo(
-    () => derived.find(record => record.id === peekId) ?? null,
-    [derived, peekId]
-  );
-
-  // Deep link: /domains?focus=<id> opens the side-peek.
+  // Deep link: /domains?focus=<id> opens the domain's own page. The table itself
+  // never opens anything — a domain is edited from its ⋯ menu.
   useEffect(() => {
     const focus = searchParams.get("focus");
-    if (focus) setPeekId(focus);
-  }, [searchParams]);
+    if (!focus) return;
+    const position = positions.get(focus);
+    if (position) navigate(`/domains/${position}`, { replace: true });
+  }, [searchParams, positions, navigate]);
 
   const quickUpdateDomain = useCallback(
     (domain: DerivedDomain, values: DomainUpdate) => {
@@ -217,24 +213,6 @@ export function DomainsPage() {
     };
   }, [runExport]);
 
-  function handlePeek(domain: DerivedDomain) {
-    setPeekId(domain.id);
-    setSearchParams(params => {
-      params.set("focus", domain.id);
-      return params;
-    });
-  }
-
-  function closePeek(open: boolean) {
-    if (!open) {
-      setPeekId(null);
-      setSearchParams(params => {
-        params.delete("focus");
-        return params;
-      });
-    }
-  }
-
   async function handleBulkArchive() {
     const ids = selected.map(row => row.id);
     await bulkArchive.mutateAsync({ domainIds: ids });
@@ -252,7 +230,10 @@ export function DomainsPage() {
   const isEmptyPortfolio = derived.length === 0 && !isLoading;
 
   return (
-    <div className="space-y-5">
+    // `relative` keeps the screen-reader live region (which is absolutely
+    // positioned) inside the page, so it can never stretch the document and
+    // leave an empty scroll area under the app.
+    <div className="relative space-y-5">
       <Confetti fire={confettiFire} />
 
       <PageHeader title={t("domains.title")} description={workspace ? t("domains.subtitle") : t("workspace.label")} />
@@ -341,12 +322,11 @@ export function DomainsPage() {
           data={filtered}
           getRowId={row => row.id}
           isLoading={isLoading}
-          onRowClick={handlePeek}
           onSelectionChange={setSelected}
           columnVisibility={effectiveColumnVisibility}
           onColumnVisibilityChange={setColumnVisibility}
           initialSorting={[{ id: "expiryDate", desc: false }]}
-          renderMobileCard={domain => <DomainCard domain={domain} onOpen={() => handlePeek(domain)} />}
+          renderMobileCard={domain => <DomainCard domain={domain} />}
           emptyState={
             <EmptyState
               compact
@@ -362,15 +342,6 @@ export function DomainsPage() {
           }
         />
       )}
-
-      <DomainSidePeek
-        open={Boolean(peekDomain)}
-        onOpenChange={closePeek}
-        domain={peekDomain}
-        onEdit={domain => {
-          setEditing(domain);
-        }}
-      />
 
       <DomainFormDialog
         open={Boolean(editing)}

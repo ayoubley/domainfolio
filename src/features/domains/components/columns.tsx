@@ -1,7 +1,6 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import type { ReactNode } from "react";
 import type { TFunction } from "i18next";
-import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   AutoRenewSwitch,
@@ -28,8 +27,10 @@ export type ColumnContext = {
 
 /**
  * The domains table: the row number, the select checkboxes, then domain (name,
- * its ⋯ menu and status badges), status, purchase price, purchase date, expiry
- * date, registrar and the auto-renew toggle.
+ * its ⋯ menu, the registry-lifecycle and source badges), the status picker,
+ * purchase price, purchase date, expiry date, registrar and auto-renew.
+ *
+ * The status appears once — in its own column — so the row never repeats it.
  *
  * Declared as object literals (not `createColumnHelper`) so the whole array is
  * precisely `ColumnDef<DerivedDomain, unknown>[]` without leaning on `any`.
@@ -100,7 +101,6 @@ export function createDomainColumns({
             <span className="shrink-0" onClick={event => event.stopPropagation()}>
               {renderActions(row.original)}
             </span>
-            <StatusBadge status={row.original.effectiveStatus} />
             {row.original.lifecycle ? <LifecycleBadge tone={row.original.lifecycle} /> : null}
             <SourceBadge source={row.original.source} />
             {row.original.archived_at ? (
