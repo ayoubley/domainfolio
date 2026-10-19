@@ -2,6 +2,7 @@ import { AlertTriangle, CheckCircle2, Download, FileSpreadsheet, FolderArchive, 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { Confetti } from "@/components/shared/Confetti";
 import { CurrencyInput } from "@/components/shared/CurrencyInput";
 import { DatePicker } from "@/components/shared/DatePicker";
 import { Field } from "@/components/shared/Field";
@@ -36,6 +37,7 @@ import {
 } from "@/features/domains/import";
 import { PURCHASE_CURRENCIES } from "@/lib/constants";
 import { toIsoDate } from "@/lib/format";
+import { playPartyPopper } from "@/lib/party-popper";
 import { cn } from "@/lib/utils";
 import type { PurchaseCurrency } from "@/types/database";
 
@@ -84,6 +86,8 @@ export function ImportDomainsDialog({ open, onOpenChange, onImported }: Props) {
   const [fileName, setFileName] = useState("");
   const [mapping, setMapping] = useState<ColumnMapping>({});
   const [reading, setReading] = useState(false);
+  // Every successful import pops the confetti and the popper once.
+  const [celebrate, setCelebrate] = useState(0);
   const fileInput = useRef<HTMLInputElement>(null);
 
   // A file/text from last time shouldn't leak into a fresh open.
@@ -201,6 +205,9 @@ export function ImportDomainsDialog({ open, onOpenChange, onImported }: Props) {
 
       const total = created.length + restored.length;
       toast.success(t("domains.import.done", { count: total }));
+      // The celebration is part of the import, not of the page that opened it.
+      setCelebrate(value => value + 1);
+      playPartyPopper();
       onImported?.(total);
       setNamesText("");
       setSheet(null);
@@ -217,6 +224,8 @@ export function ImportDomainsDialog({ open, onOpenChange, onImported }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={busy ? undefined : onOpenChange}>
+      {/* Rendered outside the dialog content so the burst outlives the close. */}
+      <Confetti fire={celebrate} />
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{t("domains.import.title")}</DialogTitle>

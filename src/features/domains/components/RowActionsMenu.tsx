@@ -1,11 +1,9 @@
 import {
-  Archive,
   BadgeDollarSign,
   ExternalLink,
   FileText,
   MoreHorizontal,
   StickyNote,
-  Tag,
   Trash2,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -21,17 +19,15 @@ import type { DerivedDomain } from "@/lib/domain-rules";
 
 export type RowActionHandlers = {
   onPurchaseDetails: () => void;
-  onPricing: () => void;
   onNotes: () => void;
   onMarkSold: () => void;
-  onArchive: () => void;
   onDelete: () => void;
 };
 
 /**
- * The ⋯ menu that sits in front of each domain name. Seven actions, in the
- * order requested: the editable records first, then the two lifecycle
- * shortcuts, then the link out and the destructive delete last.
+ * The ⋯ menu that sits in front of each domain name. Five actions, in the order
+ * requested: the editable records first, then the lifecycle shortcut, then the
+ * link out and the destructive delete last.
  */
 export function RowActionsMenu({
   domain,
@@ -59,10 +55,6 @@ export function RowActionsMenu({
           <FileText />
           {t("domains.actions.purchaseDetails")}
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => handlers.onPricing()}>
-          <Tag />
-          {t("domains.actions.pricing")}
-        </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => handlers.onNotes()}>
           <StickyNote />
           {t("domains.actions.notes")}
@@ -73,10 +65,6 @@ export function RowActionsMenu({
         <DropdownMenuItem onSelect={() => handlers.onMarkSold()}>
           <BadgeDollarSign />
           {t("domains.actions.markSold")}
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => handlers.onArchive()}>
-          <Archive />
-          {t("domains.actions.archive")}
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />

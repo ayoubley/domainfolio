@@ -1,12 +1,12 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import type { ReactNode } from "react";
 import type { TFunction } from "i18next";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   AutoRenewSwitch,
   LifecycleBadge,
   StatusSelect,
 } from "@/features/domains/components/DomainCells";
+import { selectColumn } from "@/features/domains/components/SelectionBar";
 import type { DerivedDomain } from "@/lib/domain-rules";
 import { formatDate, money } from "@/lib/format";
 import type { DomainUpdate } from "@/types/database";
@@ -52,27 +52,7 @@ export function createDomainColumns({
         <span className="tabular text-2xs text-muted-foreground">{positions.get(row.original.id) ?? "—"}</span>
       ),
     },
-    {
-      id: "select",
-      size: 36,
-      enableSorting: false,
-      enableHiding: false,
-      header: ({ table }) => (
-        <Checkbox
-          aria-label={t("common.selectAll")}
-          checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
-          onCheckedChange={value => table.toggleAllPageRowsSelected(Boolean(value))}
-        />
-      ),
-      cell: ({ row }) => (
-        <Checkbox
-          aria-label={row.original.domain}
-          checked={row.getIsSelected()}
-          onCheckedChange={value => row.toggleSelected(Boolean(value))}
-          onClick={event => event.stopPropagation()}
-        />
-      ),
-    },
+    selectColumn(t),
     {
       id: "domain",
       accessorKey: "domain",

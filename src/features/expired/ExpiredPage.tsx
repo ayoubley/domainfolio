@@ -1,14 +1,18 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { CalendarX2 } from "lucide-react";
+import { CalendarX2, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { DataTable } from "@/components/shared/DataTable";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ErrorState } from "@/components/shared/ErrorState";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { Button } from "@/components/ui/button";
 import { LifecycleBadge } from "@/features/domains/components/DomainCells";
-import { useDomainsQuery } from "@/features/domains/queries";
+import { SelectionBar, selectColumn } from "@/features/domains/components/SelectionBar";
+import { useDeleteDomain, useDomainsQuery } from "@/features/domains/queries";
 import { deriveDomains, isExpired } from "@/lib/domain-rules";
 import type { DerivedDomain } from "@/lib/domain-rules";
 import { formatDate, money, relativeDays } from "@/lib/format";
@@ -24,9 +28,13 @@ export function ExpiredPage() {
   const { data: rows, isLoading, isError, refetch, isFetching } = useDomainsQuery(true);
 
   const expired = useMemo(() => deriveDomains(rows ?? []).filter(isExpired), [rows]);
+  const [selected, setSelected] = useState<DerivedDomain[]>([]);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const remove = useDeleteDomain();
 
   const columns = useMemo<ColumnDef<DerivedDomain, unknown>[]>(
     () => [
+      selectColumn(t),
       {
         id: "domain",
         accessorKey: "domain",
@@ -90,9 +98,33 @@ export function ExpiredPage() {
     [t, locale]
   );
 
+  async function handleDelete() {
+    const targets = selected;
+    try {
+      for (const domain of targets) await remove.mutateAsync(domain);
+      toast.success(t("domains.bulk.deleted", { count: targets.length }));
+      setSelected([]);
+      setConfirmDelete(false);
+    } catch {
+      toast.error(t("toast.error"));
+    }
+  }
+
   return (
     <div className="space-y-5">
       <PageHeader title={t("expired.title")} description={t("expired.subtitle")} />
+
+      <SelectionBar count={selected.length} onClear={() => setSelected([])}>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={remove.isPending}
+          onClick={() => setConfirmDelete(true)}
+        >
+          <Trash2 />
+          {t("domains.bulk.delete", { count: selected.length })}
+        </Button>
+      </SelectionBar>
 
       {isError ? (
         <ErrorState onRetry={() => void refetch()} retrying={isFetching} />
@@ -102,12 +134,24 @@ export function ExpiredPage() {
           data={expired}
           getRowId={row => row.id}
           isLoading={isLoading}
+          onSelectionChange={setSelected}
           initialSorting={[{ id: "daysLeft", desc: true }]}
           emptyState={
             <EmptyState icon={CalendarX2} title={t("expired.emptyTitle")} description={t("expired.emptyBody")} />
           }
         />
       )}
+
+      {/* Deleting from a list is final — the row leaves the database. */}
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={t("domains.bulk.deleteTitle")}
+        description={t("domains.bulk.deleteBody", { count: selected.length })}
+        confirmLabel={t("domains.bulk.deleteConfirm")}
+        tone="destructive"
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

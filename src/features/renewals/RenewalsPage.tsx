@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { CalendarClock, FileSearch, Repeat, RotateCw, Wallet } from "lucide-react";
+import { CalendarClock, FileSearch, Repeat, RotateCw, Trash2, Wallet } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { DataTable } from "@/components/shared/DataTable";
@@ -11,8 +11,10 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { SegmentedControl } from "@/components/shared/SegmentedControl";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
+import { SelectionBar, selectColumn } from "@/features/domains/components/SelectionBar";
 import { RenewDomainDialog } from "@/features/domains/components/DomainQuickDialogs";
-import { useDomainsQuery, useRenewDomain } from "@/features/domains/queries";
+import { useDeleteDomain, useDomainsQuery, useRenewDomain } from "@/features/domains/queries";
 import { deriveDomains, isExpired, summarizePortfolio } from "@/lib/domain-rules";
 import type { DerivedDomain } from "@/lib/domain-rules";
 import { formatDate, money, relativeDays } from "@/lib/format";
@@ -36,9 +38,12 @@ export function RenewalsPage() {
 
   const [window, setWindow] = useState<RenewalWindow>("30");
   const [renewTarget, setRenewTarget] = useState<DerivedDomain | null>(null);
+  const [selected, setSelected] = useState<DerivedDomain[]>([]);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const { data: rows, isLoading, isError, refetch, isFetching } = useDomainsQuery();
   const renewMutation = useRenewDomain();
+  const remove = useDeleteDomain();
 
   const derived = useMemo(() => deriveDomains(rows ?? []), [rows]);
   const summary = useMemo(() => summarizePortfolio(derived), [derived]);
@@ -58,6 +63,7 @@ export function RenewalsPage() {
 
   const columns = useMemo<ColumnDef<DerivedDomain, unknown>[]>(
     () => [
+      selectColumn(t),
       {
         id: "domain",
         accessorKey: "domain",
@@ -137,6 +143,18 @@ export function RenewalsPage() {
     [t, locale]
   );
 
+  async function handleDelete() {
+    const targets = selected;
+    try {
+      for (const domain of targets) await remove.mutateAsync(domain);
+      toast.success(t("domains.bulk.deleted", { count: targets.length }));
+      setSelected([]);
+      setConfirmDelete(false);
+    } catch {
+      toast.error(t("toast.error"));
+    }
+  }
+
   return (
     <div className="space-y-5">
       <PageHeader title={t("renewals.title")} description={t("renewals.subtitle")} />
@@ -184,6 +202,18 @@ export function RenewalsPage() {
         ]}
       />
 
+      <SelectionBar count={selected.length} onClear={() => setSelected([])}>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={remove.isPending}
+          onClick={() => setConfirmDelete(true)}
+        >
+          <Trash2 />
+          {t("domains.bulk.delete", { count: selected.length })}
+        </Button>
+      </SelectionBar>
+
       {isError ? (
         <ErrorState onRetry={() => void refetch()} retrying={isFetching} />
       ) : (
@@ -192,6 +222,7 @@ export function RenewalsPage() {
           data={list}
           getRowId={row => row.id}
           isLoading={isLoading}
+          onSelectionChange={setSelected}
           initialSorting={[{ id: "daysLeft", desc: false }]}
           emptyState={
             <EmptyState
@@ -220,6 +251,17 @@ export function RenewalsPage() {
             t("domains.detail.renewed", { domain: updated.domain, date: formatDate(updated.expiry_date) })
           );
         }}
+      />
+
+      {/* Deleting from a list is final — the row leaves the database. */}
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={t("domains.bulk.deleteTitle")}
+        description={t("domains.bulk.deleteBody", { count: selected.length })}
+        confirmLabel={t("domains.bulk.deleteConfirm")}
+        tone="destructive"
+        onConfirm={handleDelete}
       />
     </div>
   );

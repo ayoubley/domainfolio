@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { BadgeDollarSign, Pencil } from "lucide-react";
+import { BadgeDollarSign, Pencil, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { DataTable } from "@/components/shared/DataTable";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ErrorState } from "@/components/shared/ErrorState";
@@ -9,7 +11,8 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { DomainFormDialog } from "@/features/domains/components/DomainFormDialog";
-import { useDomainsQuery } from "@/features/domains/queries";
+import { SelectionBar, selectColumn } from "@/features/domains/components/SelectionBar";
+import { useDeleteDomain, useDomainsQuery } from "@/features/domains/queries";
 import { deriveDomains, isSold } from "@/lib/domain-rules";
 import type { DerivedDomain } from "@/lib/domain-rules";
 import { formatDate, money } from "@/lib/format";
@@ -27,9 +30,13 @@ export function SalesPage() {
 
   const sold = useMemo(() => deriveDomains(rows ?? []).filter(isSold), [rows]);
   const [editing, setEditing] = useState<DerivedDomain | null>(null);
+  const [selected, setSelected] = useState<DerivedDomain[]>([]);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const remove = useDeleteDomain();
 
   const columns = useMemo<ColumnDef<DerivedDomain, unknown>[]>(
     () => [
+      selectColumn(t),
       {
         id: "domain",
         accessorKey: "domain",
@@ -139,9 +146,33 @@ export function SalesPage() {
     [t]
   );
 
+  async function handleDelete() {
+    const targets = selected;
+    try {
+      for (const domain of targets) await remove.mutateAsync(domain);
+      toast.success(t("domains.bulk.deleted", { count: targets.length }));
+      setSelected([]);
+      setConfirmDelete(false);
+    } catch {
+      toast.error(t("toast.error"));
+    }
+  }
+
   return (
     <div className="space-y-5">
       <PageHeader title={t("sales.title")} description={t("sales.subtitle")} />
+
+      <SelectionBar count={selected.length} onClear={() => setSelected([])}>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={remove.isPending}
+          onClick={() => setConfirmDelete(true)}
+        >
+          <Trash2 />
+          {t("domains.bulk.delete", { count: selected.length })}
+        </Button>
+      </SelectionBar>
 
       {isError ? (
         <ErrorState onRetry={() => void refetch()} retrying={isFetching} />
@@ -151,6 +182,7 @@ export function SalesPage() {
           data={sold}
           getRowId={row => row.id}
           isLoading={isLoading}
+          onSelectionChange={setSelected}
           initialSorting={[{ id: "soldDate", desc: true }]}
           emptyState={
             <EmptyState icon={BadgeDollarSign} title={t("sales.emptyTitle")} description={t("sales.emptyBody")} />
@@ -159,6 +191,17 @@ export function SalesPage() {
       )}
 
       <DomainFormDialog open={Boolean(editing)} onOpenChange={open => !open && setEditing(null)} domain={editing} />
+
+      {/* Deleting from a list is final — the row leaves the database. */}
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={t("domains.bulk.deleteTitle")}
+        description={t("domains.bulk.deleteBody", { count: selected.length })}
+        confirmLabel={t("domains.bulk.deleteConfirm")}
+        tone="destructive"
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

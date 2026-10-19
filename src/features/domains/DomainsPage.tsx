@@ -11,17 +11,16 @@ import { ErrorState } from "@/components/shared/ErrorState";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Confetti } from "@/components/shared/Confetti";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { DomainCard } from "@/features/domains/components/DomainCard";
 import { DomainFormDialog } from "@/features/domains/components/DomainFormDialog";
 import { ImportDomainsDialog } from "@/features/domains/components/ImportDomainsDialog";
 import {
   MarkAsSoldDialog,
   NotesDialog,
-  PricingDialog,
   PurchaseDetailsDialog,
 } from "@/features/domains/components/DomainQuickDialogs";
 import { RowActionsMenu } from "@/features/domains/components/RowActionsMenu";
+import { SelectionBar } from "@/features/domains/components/SelectionBar";
 import { DomainsToolbar } from "@/features/domains/components/DomainsToolbar";
 import { createDomainColumns, DEFAULT_VISIBLE_COLUMNS } from "@/features/domains/components/columns";
 import { exportDomains } from "@/features/domains/export";
@@ -69,11 +68,8 @@ export function DomainsPage() {
 
   // Row-action dialogs
   const [purchaseTarget, setPurchaseTarget] = useState<DerivedDomain | null>(null);
-  const [pricingTarget, setPricingTarget] = useState<DerivedDomain | null>(null);
   const [notesTarget, setNotesTarget] = useState<DerivedDomain | null>(null);
-  const [archiveTarget, setArchiveTarget] = useState<DerivedDomain | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DerivedDomain | null>(null);
-  const [archiveReason, setArchiveReason] = useState("");
 
   const { data: rows, isLoading, isError, refetch, isFetching } = useDomainsQuery(filters.includeArchived);
   // The numbering and the /domains/<n> links always come from the active
@@ -138,33 +134,19 @@ export function DomainsPage() {
     [archiveMutation, restoreMutation, t]
   );
 
-  /** Archiving parks the domain, so we take the user straight to the archive. */
-  const archiveAndOpenArchive = useCallback(
-    async (domain: DerivedDomain, reason?: string | null, message?: string) => {
-      await runArchive(domain, reason, message);
-      navigate("/archive");
-    },
-    [runArchive, navigate]
-  );
-
   const renderActions = useCallback(
     (domain: DerivedDomain) => (
       <RowActionsMenu
         domain={domain}
         handlers={{
           onPurchaseDetails: () => setPurchaseTarget(domain),
-          onPricing: () => setPricingTarget(domain),
           onNotes: () => setNotesTarget(domain),
           onMarkSold: () => setSoldTarget(domain),
-          onArchive: () => {
-            setArchiveReason("");
-            setArchiveTarget(domain);
-          },
           onDelete: () => setDeleteTarget(domain),
         }}
       />
     ),
-    [archiveAndOpenArchive]
+    []
   );
 
   const columns = useMemo(
@@ -249,41 +231,31 @@ export function DomainsPage() {
         onAdd={() => setImportOpen(true)}
       />
 
-      {selected.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-primary-soft/60 px-3 py-2">
-          <span className="text-2sm font-medium text-primary">
-            {t("domains.bulk.title", { count: selected.length })}
-          </span>
-          <div className="ms-auto flex flex-wrap items-center gap-2">
-            {filters.includeArchived ? (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={async () => {
-                  await bulkRestore.mutateAsync(selected.map(row => row.id));
-                  toast.success(t("toast.restored"));
-                  setSelected([]);
-                }}
-              >
-                <ArchiveRestore />
-                {t("domains.bulk.restore")}
-              </Button>
-            ) : (
-              <Button size="sm" variant="outline" onClick={handleBulkArchive}>
-                <Trash2 />
-                {t("domains.bulk.delete", { count: selected.length })}
-              </Button>
-            )}
-            <Button size="sm" variant="outline" onClick={() => void exportDomains(selected, "xlsx")}>
-              <Download />
-              {t("domains.bulk.export")}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => setSelected([])}>
-              {t("common.clearSelection")}
-            </Button>
-          </div>
-        </div>
-      ) : null}
+      <SelectionBar count={selected.length} onClear={() => setSelected([])}>
+        {filters.includeArchived ? (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={async () => {
+              await bulkRestore.mutateAsync(selected.map(row => row.id));
+              toast.success(t("toast.restored"));
+              setSelected([]);
+            }}
+          >
+            <ArchiveRestore />
+            {t("domains.bulk.restore")}
+          </Button>
+        ) : (
+          <Button size="sm" variant="outline" onClick={handleBulkArchive}>
+            <Trash2 />
+            {t("domains.bulk.delete", { count: selected.length })}
+          </Button>
+        )}
+        <Button size="sm" variant="outline" onClick={() => void exportDomains(selected, "xlsx")}>
+          <Download />
+          {t("domains.bulk.export")}
+        </Button>
+      </SelectionBar>
 
       {isError ? (
         <ErrorState onRetry={() => void refetch()} retrying={isFetching} />
@@ -405,22 +377,6 @@ export function DomainsPage() {
         }}
       />
 
-      <PricingDialog
-        open={Boolean(pricingTarget)}
-        onOpenChange={open => {
-          if (!open) setPricingTarget(null);
-        }}
-        domain={pricingTarget}
-        onSave={async ({ askingPrice, minOffer }) => {
-          if (!pricingTarget) return;
-          await quickUpdate.mutateAsync({
-            previous: pricingTarget,
-            values: { asking_price: askingPrice, min_offer: minOffer },
-          });
-          toast.success(t("domains.detail.updated", { domain: pricingTarget.domain }));
-        }}
-      />
-
       <NotesDialog
         open={Boolean(notesTarget)}
         onOpenChange={open => {
@@ -436,28 +392,6 @@ export function DomainsPage() {
           toast.success(t("domains.detail.updated", { domain: notesTarget.domain }));
         }}
       />
-
-      <ConfirmDialog
-        open={Boolean(archiveTarget)}
-        onOpenChange={open => {
-          if (!open) setArchiveTarget(null);
-        }}
-        title={t("domains.detail.archiveTitle")}
-        description={t("domains.detail.archiveBody")}
-        confirmLabel={t("domains.detail.archive")}
-        onConfirm={async () => {
-          if (!archiveTarget) return;
-          await archiveAndOpenArchive(archiveTarget, archiveReason.trim() || null);
-          setArchiveTarget(null);
-        }}
-      >
-        <Input
-          value={archiveReason}
-          onChange={event => setArchiveReason(event.target.value)}
-          placeholder={t("domains.detail.archiveReasonPlaceholder")}
-          aria-label={t("domains.detail.archiveReason")}
-        />
-      </ConfirmDialog>
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}
